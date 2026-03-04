@@ -33,8 +33,9 @@ export class GitHubApiClient implements GitHubClient {
     const commits: Commit[] = []
     let page = 1
     const perPage = 100
+    let hasMorePages = true
 
-    while (true) {
+    while (hasMorePages) {
       const response = await this.octokit.rest.repos.listCommits({
         owner,
         repo,
@@ -45,16 +46,16 @@ export class GitHubApiClient implements GitHubClient {
       })
 
       if (response.data.length === 0) {
-        break
+        hasMorePages = false
+      } else {
+        commits.push(...(response.data as Commit[]))
+
+        if (response.data.length < perPage) {
+          hasMorePages = false
+        } else {
+          page++
+        }
       }
-
-      commits.push(...(response.data as Commit[]))
-
-      if (response.data.length < perPage) {
-        break
-      }
-
-      page++
     }
 
     return commits
