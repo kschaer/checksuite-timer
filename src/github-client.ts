@@ -3,8 +3,17 @@ import { Commit, CheckSuite } from './core'
 
 // Interface for GitHub API operations - easily mockable for testing
 export interface GitHubClient {
-  getCommits(owner: string, repo: string, branch: string, since: Date): Promise<Commit[]>
-  getCheckSuites(owner: string, repo: string, sha: string): Promise<CheckSuite[]>
+  getCommits(
+    owner: string,
+    repo: string,
+    branch: string,
+    since: Date
+  ): Promise<Commit[]>
+  getCheckSuites(
+    owner: string,
+    repo: string,
+    sha: string
+  ): Promise<CheckSuite[]>
 }
 
 // Real implementation using GitHub API
@@ -24,7 +33,7 @@ export class GitHubApiClient implements GitHubClient {
     const commits: Commit[] = []
     let page = 1
     const perPage = 100
-    
+
     while (true) {
       const response = await this.octokit.rest.repos.listCommits({
         owner,
@@ -34,20 +43,20 @@ export class GitHubApiClient implements GitHubClient {
         per_page: perPage,
         page
       })
-      
+
       if (response.data.length === 0) {
         break
       }
-      
-      commits.push(...response.data as Commit[])
-      
+
+      commits.push(...(response.data as Commit[]))
+
       if (response.data.length < perPage) {
         break
       }
-      
+
       page++
     }
-    
+
     return commits
   }
 
@@ -61,7 +70,7 @@ export class GitHubApiClient implements GitHubClient {
       repo,
       ref: sha
     })
-    
+
     return response.data.check_suites as CheckSuite[]
   }
 }

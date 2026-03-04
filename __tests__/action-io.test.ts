@@ -64,7 +64,9 @@ describe('action-io', () => {
     ]
 
     test.each(testCases)('$name', ({ inputs, expected }) => {
-      mockCore.getInput.mockImplementation((name: string) => inputs[name as keyof typeof inputs] || '')
+      mockCore.getInput.mockImplementation(
+        (name: string) => inputs[name as keyof typeof inputs] || ''
+      )
 
       const result = parseActionInputs()
 
@@ -91,7 +93,7 @@ describe('action-io', () => {
           repo: 'test-repo'
         }
       }
-      
+
       // Mock the context property
       Object.defineProperty(mockGithub, 'context', {
         value: mockContext,
@@ -113,16 +115,38 @@ describe('action-io', () => {
       const mockResult: AnalysisResult = {
         commits: [
           {
-            commit: { sha: 'abc123', timestamp: '2024-01-01T10:00:00Z', committer_email: 'user@example.com', url: 'https://github.com/owner/repo/commit/abc123' },
+            commit: {
+              sha: 'abc123',
+              timestamp: '2024-01-01T10:00:00Z',
+              committer_email: 'user@example.com',
+              url: 'https://github.com/owner/repo/commit/abc123'
+            },
             checksuites: [],
             duration_seconds: 300,
-            stats: { total: 2, successful: 1, failed: 1, cancelled: 0, other: 0 }
+            stats: {
+              total: 2,
+              successful: 1,
+              failed: 1,
+              cancelled: 0,
+              other: 0
+            }
           },
           {
-            commit: { sha: 'def456', timestamp: '2024-01-01T11:00:00Z', committer_email: 'user2@example.com', url: 'https://github.com/owner/repo/commit/def456' },
+            commit: {
+              sha: 'def456',
+              timestamp: '2024-01-01T11:00:00Z',
+              committer_email: 'user2@example.com',
+              url: 'https://github.com/owner/repo/commit/def456'
+            },
             checksuites: [],
             duration_seconds: 150,
-            stats: { total: 1, successful: 1, failed: 0, cancelled: 0, other: 0 }
+            stats: {
+              total: 1,
+              successful: 1,
+              failed: 0,
+              cancelled: 0,
+              other: 0
+            }
           }
         ],
         summary: {
@@ -134,10 +158,16 @@ describe('action-io', () => {
 
       setActionOutputs(mockResult)
 
-      expect(mockCore.setOutput).toHaveBeenCalledWith('commits_data', JSON.stringify(mockResult))
+      expect(mockCore.setOutput).toHaveBeenCalledWith(
+        'commits_data',
+        JSON.stringify(mockResult)
+      )
       expect(mockCore.setOutput).toHaveBeenCalledWith('commit_count', '2')
       expect(mockCore.setOutput).toHaveBeenCalledWith('total_checksuites', '3') // 2 + 1
-      expect(mockCore.setOutput).toHaveBeenCalledWith('avg_duration_seconds', '225') // (300 + 150) / 2
+      expect(mockCore.setOutput).toHaveBeenCalledWith(
+        'avg_duration_seconds',
+        '225'
+      ) // (300 + 150) / 2
     })
 
     test('handles empty results', () => {
@@ -152,21 +182,27 @@ describe('action-io', () => {
 
       setActionOutputs(emptyResult)
 
-      expect(mockCore.setOutput).toHaveBeenCalledWith('commits_data', JSON.stringify(emptyResult))
+      expect(mockCore.setOutput).toHaveBeenCalledWith(
+        'commits_data',
+        JSON.stringify(emptyResult)
+      )
       expect(mockCore.setOutput).toHaveBeenCalledWith('commit_count', '0')
       expect(mockCore.setOutput).toHaveBeenCalledWith('total_checksuites', '0')
-      expect(mockCore.setOutput).toHaveBeenCalledWith('avg_duration_seconds', '0')
+      expect(mockCore.setOutput).toHaveBeenCalledWith(
+        'avg_duration_seconds',
+        '0'
+      )
     })
   })
 
   describe('logAnalysisResults', () => {
     test('logs successful analysis results', () => {
       const mockCommitAnalysis: CommitAnalysis = {
-        commit: { 
-          sha: 'abc123', 
-          timestamp: '2024-01-01T10:00:00Z', 
-          committer_email: 'user@example.com', 
-          url: 'https://github.com/owner/repo/commit/abc123' 
+        commit: {
+          sha: 'abc123',
+          timestamp: '2024-01-01T10:00:00Z',
+          committer_email: 'user@example.com',
+          url: 'https://github.com/owner/repo/commit/abc123'
         },
         checksuites: [],
         duration_seconds: 300,
@@ -180,18 +216,22 @@ describe('action-io', () => {
 
       logAnalysisResults(mockResult)
 
-      expect(mockCore.info).toHaveBeenCalledWith('Analysis complete: 1 commits, 0 successful, 1 with failures')
-      expect(mockCore.info).toHaveBeenCalledWith('Commit abc123: 300s duration, 2 checksuites (1 successful, 1 failed)')
+      expect(mockCore.info).toHaveBeenCalledWith(
+        'Analysis complete: 1 commits, 0 successful, 1 with failures'
+      )
+      expect(mockCore.info).toHaveBeenCalledWith(
+        'Commit abc123: 300s duration, 2 checksuites (1 successful, 1 failed)'
+      )
       expect(mockCore.warning).not.toHaveBeenCalled()
     })
 
     test('logs commit with errors', () => {
       const mockCommitAnalysis: CommitAnalysis = {
-        commit: { 
-          sha: 'abc123', 
-          timestamp: '2024-01-01T10:00:00Z', 
-          committer_email: 'user@example.com', 
-          url: 'https://github.com/owner/repo/commit/abc123' 
+        commit: {
+          sha: 'abc123',
+          timestamp: '2024-01-01T10:00:00Z',
+          committer_email: 'user@example.com',
+          url: 'https://github.com/owner/repo/commit/abc123'
         },
         checksuites: [],
         duration_seconds: 0,
@@ -206,20 +246,34 @@ describe('action-io', () => {
 
       logAnalysisResults(mockResult)
 
-      expect(mockCore.info).toHaveBeenCalledWith('Analysis complete: 1 commits, 0 successful, 1 with failures')
-      expect(mockCore.warning).toHaveBeenCalledWith('Error analyzing commit abc123: API rate limit exceeded')
+      expect(mockCore.info).toHaveBeenCalledWith(
+        'Analysis complete: 1 commits, 0 successful, 1 with failures'
+      )
+      expect(mockCore.warning).toHaveBeenCalledWith(
+        'Error analyzing commit abc123: API rate limit exceeded'
+      )
     })
 
     test('logs mixed results', () => {
       const successfulCommit: CommitAnalysis = {
-        commit: { sha: 'abc123', timestamp: '2024-01-01T10:00:00Z', committer_email: 'user@example.com', url: 'https://github.com/owner/repo/commit/abc123' },
+        commit: {
+          sha: 'abc123',
+          timestamp: '2024-01-01T10:00:00Z',
+          committer_email: 'user@example.com',
+          url: 'https://github.com/owner/repo/commit/abc123'
+        },
         checksuites: [],
         duration_seconds: 300,
         stats: { total: 1, successful: 1, failed: 0, cancelled: 0, other: 0 }
       }
 
       const failedCommit: CommitAnalysis = {
-        commit: { sha: 'def456', timestamp: '2024-01-01T11:00:00Z', committer_email: 'user2@example.com', url: 'https://github.com/owner/repo/commit/def456' },
+        commit: {
+          sha: 'def456',
+          timestamp: '2024-01-01T11:00:00Z',
+          committer_email: 'user2@example.com',
+          url: 'https://github.com/owner/repo/commit/def456'
+        },
         checksuites: [],
         duration_seconds: 0,
         stats: { total: 0, successful: 0, failed: 0, cancelled: 0, other: 0 },
@@ -235,7 +289,9 @@ describe('action-io', () => {
 
       expect(mockCore.info).toHaveBeenCalledTimes(2) // Summary + successful commit
       expect(mockCore.warning).toHaveBeenCalledTimes(1) // Failed commit
-      expect(mockCore.warning).toHaveBeenCalledWith('Error analyzing commit def456: Network timeout')
+      expect(mockCore.warning).toHaveBeenCalledWith(
+        'Error analyzing commit def456: Network timeout'
+      )
     })
   })
 })

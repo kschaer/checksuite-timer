@@ -14,7 +14,7 @@ describe('Integration Tests', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    
+
     // Setup default mocks
     mockCore.getInput.mockImplementation((name: string) => {
       const inputs: Record<string, string> = {
@@ -48,7 +48,7 @@ describe('Integration Tests', () => {
         }
       }
     }
-    
+
     mockGithub.getOctokit = jest.fn().mockReturnValue(mockOctokit)
   })
 
@@ -109,7 +109,9 @@ describe('Integration Tests', () => {
         }
       ]
 
-      mockOctokit.rest.repos.listCommits.mockResolvedValue({ data: mockCommits })
+      mockOctokit.rest.repos.listCommits.mockResolvedValue({
+        data: mockCommits
+      })
       mockOctokit.rest.checks.listSuitesForRef
         .mockResolvedValueOnce({ data: { check_suites: mockCheckSuites1 } })
         .mockResolvedValueOnce({ data: { check_suites: mockCheckSuites2 } })
@@ -139,22 +141,28 @@ describe('Integration Tests', () => {
       })
 
       // Verify outputs were set
-      expect(mockCore.setOutput).toHaveBeenCalledWith('commits_data', expect.any(String))
+      expect(mockCore.setOutput).toHaveBeenCalledWith(
+        'commits_data',
+        expect.any(String)
+      )
       expect(mockCore.setOutput).toHaveBeenCalledWith('commit_count', '2')
       expect(mockCore.setOutput).toHaveBeenCalledWith('total_checksuites', '3')
-      expect(mockCore.setOutput).toHaveBeenCalledWith('avg_duration_seconds', expect.any(String))
+      expect(mockCore.setOutput).toHaveBeenCalledWith(
+        'avg_duration_seconds',
+        expect.any(String)
+      )
 
       // Parse and verify the commits_data output
       const commitsDataCall = (mockCore.setOutput as jest.Mock).mock.calls.find(
         call => call[0] === 'commits_data'
       )
       expect(commitsDataCall).toBeDefined()
-      
+
       const result = JSON.parse(commitsDataCall[1])
       expect(result).toHaveProperty('commits')
       expect(result).toHaveProperty('summary')
       expect(result.commits).toHaveLength(2)
-      
+
       // Verify first commit analysis
       expect(result.commits[0].commit.sha).toBe('commit1')
       expect(result.commits[0].duration_seconds).toBe(420) // 7 minutes (10:01 to 10:08)
@@ -165,7 +173,7 @@ describe('Integration Tests', () => {
         cancelled: 0,
         other: 0
       })
-      
+
       // Verify second commit analysis
       expect(result.commits[1].commit.sha).toBe('commit2')
       expect(result.commits[1].duration_seconds).toBe(120) // 2 minutes (11:01 to 11:03)
@@ -181,7 +189,7 @@ describe('Integration Tests', () => {
       expect(result.summary).toEqual({
         total_commits: 2,
         successful_commits: 1, // Only commit2 has no failures
-        failed_commits: 1      // commit1 has 1 failure
+        failed_commits: 1 // commit1 has 1 failure
       })
 
       // Verify no errors were set
@@ -193,9 +201,11 @@ describe('Integration Tests', () => {
 
       await run()
 
-      expect(mockCore.info).toHaveBeenCalledWith('No commits found in the specified time window. Exiting gracefully.')
+      expect(mockCore.info).toHaveBeenCalledWith(
+        'No commits found in the specified time window. Exiting gracefully.'
+      )
       expect(mockOctokit.rest.checks.listSuitesForRef).not.toHaveBeenCalled()
-      
+
       const commitsDataCall = (mockCore.setOutput as jest.Mock).mock.calls.find(
         call => call[0] === 'commits_data'
       )
@@ -212,7 +222,9 @@ describe('Integration Tests', () => {
 
       await run()
 
-      expect(mockCore.setFailed).toHaveBeenCalledWith('GitHub API rate limit exceeded')
+      expect(mockCore.setFailed).toHaveBeenCalledWith(
+        'GitHub API rate limit exceeded'
+      )
     })
 
     test('handles invalid time window', async () => {
@@ -244,7 +256,9 @@ describe('Integration Tests', () => {
 
       await run()
 
-      expect(mockCore.setFailed).toHaveBeenCalledWith('GitHub token is required')
+      expect(mockCore.setFailed).toHaveBeenCalledWith(
+        'GitHub token is required'
+      )
     })
 
     test('handles partial failures in commit analysis', async () => {
@@ -253,33 +267,54 @@ describe('Integration Tests', () => {
           sha: 'commit1',
           commit: {
             author: { date: '2024-01-01T10:00:00Z' },
-            committer: { email: 'user@example.com', date: '2024-01-01T10:00:00Z' }
+            committer: {
+              email: 'user@example.com',
+              date: '2024-01-01T10:00:00Z'
+            }
           }
         },
         {
           sha: 'commit2',
           commit: {
             author: { date: '2024-01-01T11:00:00Z' },
-            committer: { email: 'user2@example.com', date: '2024-01-01T11:00:00Z' }
+            committer: {
+              email: 'user2@example.com',
+              date: '2024-01-01T11:00:00Z'
+            }
           }
         }
       ]
 
-      mockOctokit.rest.repos.listCommits.mockResolvedValue({ data: mockCommits })
-      
+      mockOctokit.rest.repos.listCommits.mockResolvedValue({
+        data: mockCommits
+      })
+
       // First commit succeeds, second fails
       mockOctokit.rest.checks.listSuitesForRef
-        .mockResolvedValueOnce({ data: { check_suites: [{ id: 1, conclusion: 'success', created_at: '2024-01-01T10:01:00Z', updated_at: '2024-01-01T10:05:00Z' }] } })
+        .mockResolvedValueOnce({
+          data: {
+            check_suites: [
+              {
+                id: 1,
+                conclusion: 'success',
+                created_at: '2024-01-01T10:01:00Z',
+                updated_at: '2024-01-01T10:05:00Z'
+              }
+            ]
+          }
+        })
         .mockRejectedValueOnce(new Error('Checksuite API error'))
 
       await run()
 
       // Should not fail the entire action
       expect(mockCore.setFailed).not.toHaveBeenCalled()
-      
+
       // Should log warning about the failed commit
       expect(mockCore.warning).toHaveBeenCalledWith(
-        expect.stringContaining('Error analyzing commit commit2: Checksuite API error')
+        expect.stringContaining(
+          'Error analyzing commit commit2: Checksuite API error'
+        )
       )
 
       // Should still output results for successful commits

@@ -59,14 +59,16 @@ export function parseTimeWindow(timeWindow: string): Date {
   const now = new Date()
   const regex = /^(\d+)([dhm])$/
   const match = timeWindow.match(regex)
-  
+
   if (!match) {
-    throw new Error(`Invalid time window format: ${timeWindow}. Expected format like '7d', '24h', '12h', '30m'`)
+    throw new Error(
+      `Invalid time window format: ${timeWindow}. Expected format like '7d', '24h', '12h', '30m'`
+    )
   }
-  
+
   const value = parseInt(match[1], 10)
   const unit = match[2]
-  
+
   if (unit === 'd') {
     return new Date(now.getTime() - value * 24 * 60 * 60 * 1000)
   } else if (unit === 'h') {
@@ -74,12 +76,14 @@ export function parseTimeWindow(timeWindow: string): Date {
   } else if (unit === 'm') {
     return new Date(now.getTime() - value * 60 * 1000)
   }
-  
+
   throw new Error(`Unsupported time unit: ${unit}`)
 }
 
 // Pure function: Checksuite statistics calculation
-export function calculateCheckSuiteStats(checkSuites: CheckSuite[]): CheckSuiteStats {
+export function calculateCheckSuiteStats(
+  checkSuites: CheckSuite[]
+): CheckSuiteStats {
   const stats: CheckSuiteStats = {
     total: checkSuites.length,
     successful: 0,
@@ -87,7 +91,7 @@ export function calculateCheckSuiteStats(checkSuites: CheckSuite[]): CheckSuiteS
     cancelled: 0,
     other: 0
   }
-  
+
   for (const suite of checkSuites) {
     switch (suite.conclusion) {
       case 'success':
@@ -106,7 +110,7 @@ export function calculateCheckSuiteStats(checkSuites: CheckSuite[]): CheckSuiteS
         break
     }
   }
-  
+
   return stats
 }
 
@@ -115,13 +119,17 @@ export function calculateWallToWallDuration(checkSuites: CheckSuite[]): number {
   if (checkSuites.length === 0) {
     return 0
   }
-  
-  const createdTimes = checkSuites.map(suite => new Date(suite.created_at).getTime())
-  const updatedTimes = checkSuites.map(suite => new Date(suite.updated_at).getTime())
-  
+
+  const createdTimes = checkSuites.map(suite =>
+    new Date(suite.created_at).getTime()
+  )
+  const updatedTimes = checkSuites.map(suite =>
+    new Date(suite.updated_at).getTime()
+  )
+
   const earliestStart = Math.min(...createdTimes)
   const latestEnd = Math.max(...updatedTimes)
-  
+
   return Math.round((latestEnd - earliestStart) / 1000)
 }
 
@@ -150,7 +158,7 @@ export function createCommitAnalysis(
   const commitData = formatCommitData(commit, owner, repo)
   const stats = calculateCheckSuiteStats(checkSuites)
   const duration = calculateWallToWallDuration(checkSuites)
-  
+
   return {
     commit: commitData,
     checksuites: checkSuites,
@@ -161,10 +169,13 @@ export function createCommitAnalysis(
 }
 
 // Pure function: Calculate summary statistics
-export function calculateSummary(analyses: CommitAnalysis[]): AnalysisResult['summary'] {
+export function calculateSummary(
+  analyses: CommitAnalysis[]
+): AnalysisResult['summary'] {
   return {
     total_commits: analyses.length,
-    successful_commits: analyses.filter(a => !a.error && a.stats.failed === 0).length,
+    successful_commits: analyses.filter(a => !a.error && a.stats.failed === 0)
+      .length,
     failed_commits: analyses.filter(a => a.error || a.stats.failed > 0).length
   }
 }

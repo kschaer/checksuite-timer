@@ -61,16 +61,18 @@ describe('parseTimeWindow', () => {
     }
   ]
 
-  test.each(testCases)('parseTimeWindow("$input") should return date $expectedDaysAgo days/$expectedHoursAgo hours/$expectedMinutesAgo minutes ago', 
+  test.each(testCases)(
+    'parseTimeWindow("$input") should return date $expectedDaysAgo days/$expectedHoursAgo hours/$expectedMinutesAgo minutes ago',
     ({ input, expectedDaysAgo, expectedHoursAgo, expectedMinutesAgo }) => {
       const result = parseTimeWindow(input)
       const now = new Date()
-      const expected = new Date(now.getTime() - 
-        ((expectedDaysAgo || 0) * 24 * 60 * 60 * 1000) -
-        ((expectedHoursAgo || 0) * 60 * 60 * 1000) - 
-        ((expectedMinutesAgo || 0) * 60 * 1000)
+      const expected = new Date(
+        now.getTime() -
+          (expectedDaysAgo || 0) * 24 * 60 * 60 * 1000 -
+          (expectedHoursAgo || 0) * 60 * 60 * 1000 -
+          (expectedMinutesAgo || 0) * 60 * 1000
       )
-      
+
       expect(result.getTime()).toBe(expected.getTime())
     }
   )
@@ -84,9 +86,12 @@ describe('parseTimeWindow', () => {
     { input: '24s', description: 'unsupported unit (seconds)' }
   ]
 
-  test.each(errorCases)('parseTimeWindow("$input") should throw error for $description', ({ input }) => {
-    expect(() => parseTimeWindow(input)).toThrow()
-  })
+  test.each(errorCases)(
+    'parseTimeWindow("$input") should throw error for $description',
+    ({ input }) => {
+      expect(() => parseTimeWindow(input)).toThrow()
+    }
+  )
 })
 
 describe('calculateCheckSuiteStats', () => {
@@ -98,10 +103,7 @@ describe('calculateCheckSuiteStats', () => {
     },
     {
       name: 'all successful',
-      checkSuites: [
-        { conclusion: 'success' },
-        { conclusion: 'success' }
-      ],
+      checkSuites: [{ conclusion: 'success' }, { conclusion: 'success' }],
       expected: { total: 2, successful: 2, failed: 0, cancelled: 0, other: 0 }
     },
     {
@@ -150,9 +152,9 @@ describe('calculateWallToWallDuration', () => {
     {
       name: 'single checksuite',
       checkSuites: [
-        { 
-          created_at: '2024-01-01T10:00:00Z', 
-          updated_at: '2024-01-01T10:05:00Z' 
+        {
+          created_at: '2024-01-01T10:00:00Z',
+          updated_at: '2024-01-01T10:05:00Z'
         }
       ],
       expected: 300 // 5 minutes
@@ -160,30 +162,48 @@ describe('calculateWallToWallDuration', () => {
     {
       name: 'multiple overlapping checksuites',
       checkSuites: [
-        { created_at: '2024-01-01T10:00:00Z', updated_at: '2024-01-01T10:03:00Z' },
-        { created_at: '2024-01-01T10:01:00Z', updated_at: '2024-01-01T10:08:00Z' }
+        {
+          created_at: '2024-01-01T10:00:00Z',
+          updated_at: '2024-01-01T10:03:00Z'
+        },
+        {
+          created_at: '2024-01-01T10:01:00Z',
+          updated_at: '2024-01-01T10:08:00Z'
+        }
       ],
       expected: 480 // 8 minutes (10:00 to 10:08)
     },
     {
       name: 'checksuites with gaps',
       checkSuites: [
-        { created_at: '2024-01-01T10:00:00Z', updated_at: '2024-01-01T10:02:00Z' },
-        { created_at: '2024-01-01T10:05:00Z', updated_at: '2024-01-01T10:07:00Z' }
+        {
+          created_at: '2024-01-01T10:00:00Z',
+          updated_at: '2024-01-01T10:02:00Z'
+        },
+        {
+          created_at: '2024-01-01T10:05:00Z',
+          updated_at: '2024-01-01T10:07:00Z'
+        }
       ],
       expected: 420 // 7 minutes (10:00 to 10:07, including gap)
     },
     {
       name: 'same start and end times',
       checkSuites: [
-        { created_at: '2024-01-01T10:00:00Z', updated_at: '2024-01-01T10:00:00Z' }
+        {
+          created_at: '2024-01-01T10:00:00Z',
+          updated_at: '2024-01-01T10:00:00Z'
+        }
       ],
       expected: 0
     },
     {
       name: 'very long duration',
       checkSuites: [
-        { created_at: '2024-01-01T09:00:00Z', updated_at: '2024-01-01T11:30:00Z' }
+        {
+          created_at: '2024-01-01T09:00:00Z',
+          updated_at: '2024-01-01T11:30:00Z'
+        }
       ],
       expected: 9000 // 2.5 hours
     }
@@ -266,7 +286,7 @@ describe('calculateSummary', () => {
         { error: undefined, stats: { failed: 0 } }, // successful
         { error: 'API Error', stats: { failed: 0 } }, // error
         { error: undefined, stats: { failed: 2 } }, // has failures
-        { error: undefined, stats: { failed: 0 } }  // successful
+        { error: undefined, stats: { failed: 0 } } // successful
       ],
       expected: { total_commits: 4, successful_commits: 2, failed_commits: 2 }
     },

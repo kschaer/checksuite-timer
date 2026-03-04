@@ -9,7 +9,7 @@ import {
 
 // Service class for commit analysis - testable with mocked GitHubClient
 export class AnalysisService {
-  constructor(private gitHubClient: GitHubClient) { }
+  constructor(private gitHubClient: GitHubClient) {}
 
   // Analyze a single commit - separated API calls from business logic
   async analyzeCommit(
@@ -19,7 +19,11 @@ export class AnalysisService {
   ): Promise<CommitAnalysis> {
     try {
       // API call (mockable)
-      const checkSuites = await this.gitHubClient.getCheckSuites(owner, repo, commit.sha)
+      const checkSuites = await this.gitHubClient.getCheckSuites(
+        owner,
+        repo,
+        commit.sha
+      )
 
       // Pure business logic (easily testable)
       return createCommitAnalysis(commit, checkSuites, owner, repo)
@@ -32,13 +36,7 @@ export class AnalysisService {
         errorMessage = `${errorMessage}. This usually means the GITHUB_TOKEN lacks 'checks: read' permission. See README for required permissions.`
       }
 
-      return createCommitAnalysis(
-        commit,
-        [],
-        owner,
-        repo,
-        errorMessage
-      )
+      return createCommitAnalysis(commit, [], owner, repo, errorMessage)
     }
   }
 
@@ -67,7 +65,12 @@ export class AnalysisService {
     since: Date
   ): Promise<AnalysisResult> {
     // Get commits from GitHub API
-    const commits = await this.gitHubClient.getCommits(owner, repo, branch, since)
+    const commits = await this.gitHubClient.getCommits(
+      owner,
+      repo,
+      branch,
+      since
+    )
 
     // Analyze each commit
     const commitAnalyses = await this.analyzeCommits(commits, owner, repo)
