@@ -10,7 +10,9 @@
     "lint": "eslint src/**/*.ts",
     "package": "yarn build",
     "test": "jest",
-    "all": "yarn build && yarn format && yarn lint && yarn package && yarn test"
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "all": "yarn build && yarn format && yarn lint && yarn test && yarn package"
   },
   "repository": {
     "type": "git",
@@ -32,6 +34,7 @@
     "@actions/github": "^6.0.0"
   },
   "devDependencies": {
+    "@types/jest": "^30.0.0",
     "@types/node": "^20.11.0",
     "@typescript-eslint/eslint-plugin": "^6.20.0",
     "@typescript-eslint/parser": "^6.20.0",
