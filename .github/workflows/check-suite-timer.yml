@@ -18,12 +18,14 @@ on:
       debug:
         description: 'Enable debug output'
         required: false
-        default: 'false'
+        default: false
         type: boolean
 
 permissions:
   contents: read
   actions: read
+  checks: read
+  pull-requests: read
 
 jobs:
   test-action:

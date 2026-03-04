@@ -24,8 +24,10 @@ This action requires the following permissions to function properly:
 
 ```yaml
 permissions:
-  contents: read    # Required to access repository commits
-  actions: read     # Required to access GitHub Actions check suites
+  contents: read        # Required to access repository commits
+  actions: read         # Required to access GitHub Actions workflow runs
+  checks: read          # Required to access check suites and check runs
+  pull-requests: read   # Required for check suites associated with PRs
 ```
 
 ### Inputs

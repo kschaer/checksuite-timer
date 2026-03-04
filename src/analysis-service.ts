@@ -9,7 +9,7 @@ import {
 
 // Service class for commit analysis - testable with mocked GitHubClient
 export class AnalysisService {
-  constructor(private gitHubClient: GitHubClient) {}
+  constructor(private gitHubClient: GitHubClient) { }
 
   // Analyze a single commit - separated API calls from business logic
   async analyzeCommit(
@@ -20,17 +20,24 @@ export class AnalysisService {
     try {
       // API call (mockable)
       const checkSuites = await this.gitHubClient.getCheckSuites(owner, repo, commit.sha)
-      
+
       // Pure business logic (easily testable)
       return createCommitAnalysis(commit, checkSuites, owner, repo)
     } catch (error) {
-      // Error handling - return analysis with error
+      // Enhanced error handling with better context
+      let errorMessage = error instanceof Error ? error.message : String(error)
+
+      // Provide helpful guidance for common permission errors
+      if (errorMessage.includes('Resource not accessible by integration')) {
+        errorMessage = `${errorMessage}. This usually means the GITHUB_TOKEN lacks 'checks: read' permission. See README for required permissions.`
+      }
+
       return createCommitAnalysis(
         commit,
         [],
         owner,
         repo,
-        error instanceof Error ? error.message : String(error)
+        errorMessage
       )
     }
   }
@@ -42,13 +49,13 @@ export class AnalysisService {
     repo: string
   ): Promise<CommitAnalysis[]> {
     const analyses: CommitAnalysis[] = []
-    
+
     // Process each commit individually to isolate errors
     for (const commit of commits) {
       const analysis = await this.analyzeCommit(commit, owner, repo)
       analyses.push(analysis)
     }
-    
+
     return analyses
   }
 
@@ -61,13 +68,13 @@ export class AnalysisService {
   ): Promise<AnalysisResult> {
     // Get commits from GitHub API
     const commits = await this.gitHubClient.getCommits(owner, repo, branch, since)
-    
+
     // Analyze each commit
     const commitAnalyses = await this.analyzeCommits(commits, owner, repo)
-    
+
     // Calculate summary statistics using pure function
     const summary = calculateSummary(commitAnalyses)
-    
+
     return {
       commits: commitAnalyses,
       summary

@@ -28,6 +28,8 @@ on:
 permissions:
   contents: read
   actions: read
+  checks: read
+  pull-requests: read
 
 jobs:
   basic-analysis:

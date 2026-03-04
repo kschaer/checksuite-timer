@@ -78,8 +78,26 @@ Run with test scenario: `compare-time-windows`
 
 1. **Commit count = 0**: Normal if no recent activity
 2. **Duration = 0**: May indicate checksuites still running
-3. **API errors**: Check if token has proper permissions
-4. **Very high durations**: May indicate long-running or stuck workflows
+3. **"Resource not accessible by integration"**: Missing `checks: read` permission
+4. **API errors**: Check if token has proper permissions
+5. **Very high durations**: May indicate long-running or stuck workflows
+
+### 🔧 Common Permission Error
+
+If you see:
+```
+Error analyzing commit: Resource not accessible by integration
+```
+
+**Solution**: Add the missing permission to your workflow:
+
+```yaml
+permissions:
+  contents: read
+  actions: read
+  checks: read          # ← Add this
+  pull-requests: read   # ← And this
+```
 
 ## 📊 Sample Expected Output
 
