@@ -1,0 +1,32 @@
+# Example workflow for testing the checksuite-timer action in this repository
+name: Test Checksuite Timer Action
+
+on:
+  schedule:
+    # Run daily at 9 AM UTC to track deploy times
+    - cron: '0 9 * * *'
+  workflow_dispatch: # Allow manual triggering for testing
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  test-action:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Test local action
+        uses: ./
+        with:
+          branch: 'main'
+          time_window: '24h'
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Display results
+        run: |
+          echo "Duration: ${{ steps.test-action.outputs.duration_seconds }} seconds"
+          echo "Commits: ${{ steps.test-action.outputs.commit_count }}"
+          echo "Total checksuites: ${{ steps.test-action.outputs.total_checksuites }}"

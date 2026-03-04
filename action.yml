@@ -1,0 +1,41 @@
+name: 'Check Suite Timer'
+description: 'Track the duration of GitHub Actions checksuites for commits to calculate deploy timing'
+author: 'Your Name'
+
+inputs:
+  branch:
+    description: 'The branch to analyze for commits'
+    required: false
+    default: 'main'
+  time_window:
+    description: 'Time window to look back for commits (e.g., 24h, 12h, 30m)'
+    required: false
+    default: '24h'
+  github_token:
+    description: 'GitHub token with appropriate permissions (contents:read, actions:read)'
+    required: true
+    default: ${{ github.token }}
+
+outputs:
+  duration_seconds:
+    description: 'Total wall-to-wall duration in seconds'
+  commit_count:
+    description: 'Number of commits analyzed'
+  total_checksuites:
+    description: 'Total number of checksuites found'
+  successful_checksuites:
+    description: 'Number of successful checksuites'
+  failed_checksuites:
+    description: 'Number of failed checksuites'
+  cancelled_checksuites:
+    description: 'Number of cancelled checksuites'
+  other_checksuites:
+    description: 'Number of checksuites with other conclusions'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
+
+branding:
+  icon: 'clock'
+  color: 'blue'
