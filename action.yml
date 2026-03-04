@@ -1,0 +1,35 @@
+name: 'Check Suite Timer'
+description: 'Track the duration of GitHub Actions checksuites for commits to calculate deploy timing'
+author: 'Your Name'
+
+inputs:
+  branch:
+    description: 'The branch to analyze for commits'
+    required: false
+    default: 'main'
+  time_window:
+    description: 'Time window to look back for commits (e.g., 24h, 12h, 30m)'
+    required: false
+    default: '24h'
+  github_token:
+    description: 'GitHub token with appropriate permissions (contents:read, actions:read)'
+    required: true
+    default: ${{ github.token }}
+
+outputs:
+  commits_data:
+    description: 'JSON object with per-commit analysis including duration, checksuites, and summary stats'
+  commit_count:
+    description: 'Number of commits analyzed'
+  total_checksuites:
+    description: 'Total number of checksuites across all commits'
+  avg_duration_seconds:
+    description: 'Average duration across all commits in seconds'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
+
+branding:
+  icon: 'clock'
+  color: 'blue'

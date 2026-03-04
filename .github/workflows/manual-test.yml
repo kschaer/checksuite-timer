@@ -1,0 +1,185 @@
+name: Manual Test - Checksuite Timer
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to analyze'
+        required: true
+        default: 'main'
+      time_window:
+        description: 'Time window (e.g., 1h, 12h, 1d, 7d)'
+        required: true
+        default: '24h'
+      debug_mode:
+        description: 'Enable debug output'
+        type: boolean
+        default: false
+      test_scenario:
+        description: 'Test scenario to run'
+        type: choice
+        options:
+          - 'basic-analysis'
+          - 'compare-time-windows'
+          - 'debug-detailed'
+          - 'performance-test'
+        default: 'basic-analysis'
+
+permissions:
+  contents: read
+  actions: read
+  checks: read
+  pull-requests: read
+
+jobs:
+  basic-analysis:
+    if: ${{ inputs.test_scenario == 'basic-analysis' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+          
+      - name: Install and build
+        run: |
+          yarn install --frozen-lockfile
+          yarn build
+        
+      - name: Run Checksuite Timer Analysis
+        id: analysis
+        uses: ./
+        with:
+          branch: ${{ inputs.branch }}
+          time_window: ${{ inputs.time_window }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Display Results
+        run: |
+          echo "## 📊 Checksuite Analysis Results"
+          echo ""
+          echo "**Configuration:**"
+          echo "- Branch: ${{ inputs.branch }}"
+          echo "- Time Window: ${{ inputs.time_window }}"
+          echo ""
+          echo "**Summary:**"
+          echo "- Commits Analyzed: ${{ steps.analysis.outputs.commit_count }}"
+          echo "- Total Checksuites: ${{ steps.analysis.outputs.total_checksuites }}"
+          echo "- Average Duration: ${{ steps.analysis.outputs.avg_duration_seconds }} seconds"
+          
+      - name: Detailed Analysis
+        run: |
+          echo "## 🔍 Per-Commit Details"
+          if [ "${{ steps.analysis.outputs.commit_count }}" != "0" ]; then
+            echo '${{ steps.analysis.outputs.commits_data }}' | jq -r '
+              .commits[] | 
+              "### Commit: \(.commit.sha[0:7])
+              - **Author**: \(.commit.committer_email)  
+              - **Timestamp**: \(.commit.timestamp)
+              - **Duration**: \(.duration_seconds) seconds (\(.duration_seconds / 60 | floor) min \(.duration_seconds % 60) sec)
+              - **Checksuites**: \(.stats.total) total (\(.stats.successful) successful, \(.stats.failed) failed, \(.stats.cancelled) cancelled)
+              - **URL**: \(.commit.url)
+              "
+            '
+          else
+            echo "No commits found in the specified time window."
+          fi
+          
+      - name: Debug Output
+        if: ${{ inputs.debug_mode }}
+        run: |
+          echo "## 🐛 Debug Information"
+          echo "**Full commits_data JSON:**"
+          echo '${{ steps.analysis.outputs.commits_data }}' | jq '.'
+
+  compare-time-windows:
+    if: ${{ inputs.test_scenario == 'compare-time-windows' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+          
+      - name: Install and build
+        run: |
+          yarn install --frozen-lockfile
+          yarn build
+        
+      - name: Analyze 1 hour
+        id: analysis-1h
+        uses: ./
+        with:
+          branch: ${{ inputs.branch }}
+          time_window: '1h'
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Analyze 24 hours
+        id: analysis-24h
+        uses: ./
+        with:
+          branch: ${{ inputs.branch }}
+          time_window: '24h'
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Analyze 7 days
+        id: analysis-7d
+        uses: ./
+        with:
+          branch: ${{ inputs.branch }}
+          time_window: '7d'
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Compare Results
+        run: |
+          echo "## 📈 Time Window Comparison"
+          echo ""
+          echo "| Time Window | Commits | Avg Duration | Total Checksuites |"
+          echo "|-------------|---------|--------------|-------------------|"
+          echo "| 1 hour      | ${{ steps.analysis-1h.outputs.commit_count }} | ${{ steps.analysis-1h.outputs.avg_duration_seconds }}s | ${{ steps.analysis-1h.outputs.total_checksuites }} |"
+          echo "| 24 hours    | ${{ steps.analysis-24h.outputs.commit_count }} | ${{ steps.analysis-24h.outputs.avg_duration_seconds }}s | ${{ steps.analysis-24h.outputs.total_checksuites }} |"
+          echo "| 7 days      | ${{ steps.analysis-7d.outputs.commit_count }} | ${{ steps.analysis-7d.outputs.avg_duration_seconds }}s | ${{ steps.analysis-7d.outputs.total_checksuites }} |"
+
+  performance-test:
+    if: ${{ inputs.test_scenario == 'performance-test' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+          
+      - name: Install and build
+        run: |
+          yarn install --frozen-lockfile
+          yarn build
+        
+      - name: Measure Performance
+        run: |
+          echo "## ⏱️ Performance Test"
+          start_time=$(date +%s)
+          
+          # Run the action and measure time
+          time ./dist/index.js &
+          
+          end_time=$(date +%s)
+          duration=$((end_time - start_time))
+          
+          echo "Action execution time: ${duration} seconds"
+        env:
+          INPUT_BRANCH: ${{ inputs.branch }}
+          INPUT_TIME_WINDOW: ${{ inputs.time_window }}
+          INPUT_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}

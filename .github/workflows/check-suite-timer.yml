@@ -1,0 +1,78 @@
+# Test the checksuite-timer action in this repository
+name: Test Checksuite Timer Action
+
+on:
+  schedule:
+    # Run daily at 9 AM UTC to track deploy times
+    - cron: '0 9 * * *'
+  workflow_dispatch: # Allow manual triggering for testing
+    inputs:
+      branch:
+        description: 'Branch to analyze'
+        required: false
+        default: 'main'
+      time_window:
+        description: 'Time window to look back (e.g., 24h, 12h, 30m)'
+        required: false
+        default: '7d'
+      debug:
+        description: 'Enable debug output'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  actions: read
+  checks: read
+  pull-requests: read
+
+jobs:
+  test-action:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+          
+      - name: Install dependencies and build
+        run: |
+          yarn install --frozen-lockfile
+          yarn build
+          
+      - name: Test local action
+        id: test-action
+        uses: ./
+        with:
+          branch: ${{ inputs.branch || 'main' }}
+          time_window: ${{ inputs.time_window || '7d' }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Display summary results
+        run: |
+          echo "🔍 Analysis Results:"
+          echo "├─ Commits analyzed: ${{ steps.test-action.outputs.commit_count }}"
+          echo "├─ Average duration: ${{ steps.test-action.outputs.avg_duration_seconds }} seconds"
+          echo "└─ Total checksuites: ${{ steps.test-action.outputs.total_checksuites }}"
+          
+      - name: Display detailed commit analysis
+        run: |
+          echo "📊 Per-Commit Analysis:"
+          echo '${{ steps.test-action.outputs.commits_data }}' | jq -r '.commits[] | "├─ Commit \(.commit.sha[0:7]) by \(.commit.committer_email): \(.duration_seconds)s duration, \(.stats.total) checksuites (\(.stats.successful) successful, \(.stats.failed) failed)"'
+          
+          echo ""
+          echo "📈 Summary:"
+          echo '${{ steps.test-action.outputs.commits_data }}' | jq -r '"├─ Total: \(.summary.total_commits) commits"'
+          echo '${{ steps.test-action.outputs.commits_data }}' | jq -r '"├─ Successful: \(.summary.successful_commits) commits with no failures"' 
+          echo '${{ steps.test-action.outputs.commits_data }}' | jq -r '"└─ With failures: \(.summary.failed_commits) commits"'
+          
+      - name: Debug output (if enabled)
+        if: ${{ inputs.debug == 'true' }}
+        run: |
+          echo "🐛 Debug: Full commits_data JSON:"
+          echo '${{ steps.test-action.outputs.commits_data }}' | jq '.'
