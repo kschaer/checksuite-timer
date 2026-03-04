@@ -16,7 +16,18 @@ interface Commit {
     author: {
       date: string
     }
+    committer: {
+      email: string
+      date: string
+    }
   }
+}
+
+interface CommitData {
+  sha: string
+  timestamp: string
+  committer_email: string
+  url: string
 }
 
 interface CheckSuiteStats {
@@ -25,6 +36,23 @@ interface CheckSuiteStats {
   failed: number
   cancelled: number
   other: number
+}
+
+interface CommitAnalysis {
+  commit: CommitData
+  checksuites: CheckSuite[]
+  duration_seconds: number
+  stats: CheckSuiteStats
+  error?: string
+}
+
+interface AnalysisResult {
+  commits: CommitAnalysis[]
+  summary: {
+    total_commits: number
+    successful_commits: number
+    failed_commits: number
+  }
 }
 
 async function parseTimeWindow(timeWindow: string): Promise<Date> {
@@ -131,7 +159,7 @@ function calculateCheckSuiteStats(checkSuites: CheckSuite[]): CheckSuiteStats {
   return stats
 }
 
-function calculateWallToWallDuration(checkSuites: CheckSuite[]): number {
+function calculateWallToWallDurationForCommit(checkSuites: CheckSuite[]): number {
   if (checkSuites.length === 0) {
     return 0
   }
@@ -143,6 +171,50 @@ function calculateWallToWallDuration(checkSuites: CheckSuite[]): number {
   const latestEnd = Math.max(...updatedTimes)
   
   return Math.round((latestEnd - earliestStart) / 1000)
+}
+
+function formatCommitData(
+  commit: Commit,
+  owner: string,
+  repo: string
+): CommitData {
+  return {
+    sha: commit.sha,
+    timestamp: commit.commit.committer.date,
+    committer_email: commit.commit.committer.email,
+    url: `https://github.com/${owner}/${repo}/commit/${commit.sha}`
+  }
+}
+
+async function analyzeCommit(
+  octokit: ReturnType<typeof github.getOctokit>,
+  commit: Commit,
+  owner: string,
+  repo: string
+): Promise<CommitAnalysis> {
+  try {
+    const commitData = formatCommitData(commit, owner, repo)
+    const checkSuites = await getCheckSuitesForCommit(octokit, owner, repo, commit.sha)
+    
+    const stats = calculateCheckSuiteStats(checkSuites)
+    const duration = calculateWallToWallDurationForCommit(checkSuites)
+    
+    return {
+      commit: commitData,
+      checksuites: checkSuites,
+      duration_seconds: duration,
+      stats
+    }
+  } catch (error) {
+    const commitData = formatCommitData(commit, owner, repo)
+    return {
+      commit: commitData,
+      checksuites: [],
+      duration_seconds: 0,
+      stats: { total: 0, successful: 0, failed: 0, cancelled: 0, other: 0 },
+      error: error instanceof Error ? error.message : String(error)
+    }
+  }
 }
 
 async function run(): Promise<void> {
@@ -169,44 +241,57 @@ async function run(): Promise<void> {
     
     if (commits.length === 0) {
       core.info('No commits found in the specified time window. Exiting gracefully.')
-      core.setOutput('duration_seconds', '0')
-      core.setOutput('commit_count', '0')
-      core.setOutput('total_checksuites', '0')
-      core.setOutput('successful_checksuites', '0')
-      core.setOutput('failed_checksuites', '0')
-      core.setOutput('cancelled_checksuites', '0')
-      core.setOutput('other_checksuites', '0')
+      const emptyResult: AnalysisResult = {
+        commits: [],
+        summary: { total_commits: 0, successful_commits: 0, failed_commits: 0 }
+      }
+      core.setOutput('commits_data', JSON.stringify(emptyResult))
       return
     }
     
-    let allCheckSuites: CheckSuite[] = []
+    // Analyze each commit individually
+    core.info('Analyzing checksuites for each commit...')
+    const commitAnalyses: CommitAnalysis[] = []
     
     for (const commit of commits) {
-      core.info(`Fetching check suites for commit: ${commit.sha}`)
-      const checkSuites = await getCheckSuitesForCommit(octokit, owner, repo, commit.sha)
-      allCheckSuites = allCheckSuites.concat(checkSuites)
+      core.info(`Analyzing commit: ${commit.sha}`)
+      const analysis = await analyzeCommit(octokit, commit, owner, repo)
+      
+      if (analysis.error) {
+        core.warning(`Error analyzing commit ${commit.sha}: ${analysis.error}`)
+      } else {
+        core.info(`  Duration: ${analysis.duration_seconds}s, Checksuites: ${analysis.stats.total} (${analysis.stats.successful} successful, ${analysis.stats.failed} failed)`)
+      }
+      
+      commitAnalyses.push(analysis)
     }
     
-    core.info(`Found ${allCheckSuites.length} total check suites across all commits`)
+    // Calculate summary stats
+    const summary = {
+      total_commits: commitAnalyses.length,
+      successful_commits: commitAnalyses.filter(a => !a.error && a.stats.failed === 0).length,
+      failed_commits: commitAnalyses.filter(a => a.error || a.stats.failed > 0).length
+    }
     
-    const stats = calculateCheckSuiteStats(allCheckSuites)
-    const durationSeconds = calculateWallToWallDuration(allCheckSuites)
+    const result: AnalysisResult = {
+      commits: commitAnalyses,
+      summary
+    }
     
-    core.info(`Check suite statistics:`)
-    core.info(`  Total: ${stats.total}`)
-    core.info(`  Successful: ${stats.successful}`)
-    core.info(`  Failed: ${stats.failed}`)
-    core.info(`  Cancelled: ${stats.cancelled}`)
-    core.info(`  Other: ${stats.other}`)
-    core.info(`Wall-to-wall duration: ${durationSeconds} seconds (${Math.round(durationSeconds / 60)} minutes)`)
+    core.info(`Analysis complete: ${summary.total_commits} commits, ${summary.successful_commits} successful, ${summary.failed_commits} with failures`)
     
-    core.setOutput('duration_seconds', durationSeconds.toString())
+    // Output the per-commit structured data
+    core.setOutput('commits_data', JSON.stringify(result))
+    
+    // Legacy outputs for backwards compatibility
+    const totalChecksuites = commitAnalyses.reduce((sum, a) => sum + a.stats.total, 0)
+    const avgDuration = commitAnalyses.length > 0 
+      ? Math.round(commitAnalyses.reduce((sum, a) => sum + a.duration_seconds, 0) / commitAnalyses.length)
+      : 0
+      
     core.setOutput('commit_count', commits.length.toString())
-    core.setOutput('total_checksuites', stats.total.toString())
-    core.setOutput('successful_checksuites', stats.successful.toString())
-    core.setOutput('failed_checksuites', stats.failed.toString())
-    core.setOutput('cancelled_checksuites', stats.cancelled.toString())
-    core.setOutput('other_checksuites', stats.other.toString())
+    core.setOutput('total_checksuites', totalChecksuites.toString())
+    core.setOutput('avg_duration_seconds', avgDuration.toString())
     
   } catch (error) {
     core.setFailed(error instanceof Error ? error.message : String(error))

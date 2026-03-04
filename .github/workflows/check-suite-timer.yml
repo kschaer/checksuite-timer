@@ -19,6 +19,7 @@ jobs:
         uses: actions/checkout@v4
         
       - name: Test local action
+        id: test-action
         uses: ./
         with:
           branch: 'main'
@@ -27,6 +28,15 @@ jobs:
           
       - name: Display results
         run: |
-          echo "Duration: ${{ steps.test-action.outputs.duration_seconds }} seconds"
-          echo "Commits: ${{ steps.test-action.outputs.commit_count }}"
+          echo "Commits analyzed: ${{ steps.test-action.outputs.commit_count }}"
+          echo "Average duration: ${{ steps.test-action.outputs.avg_duration_seconds }} seconds"
           echo "Total checksuites: ${{ steps.test-action.outputs.total_checksuites }}"
+          
+      - name: Display detailed commit analysis
+        run: |
+          echo "=== Per-Commit Analysis ==="
+          echo '${{ steps.test-action.outputs.commits_data }}' | jq -r '.commits[] | "Commit \(.commit.sha) by \(.commit.committer_email): \(.duration_seconds)s duration, \(.stats.total) checksuites (\(.stats.successful) successful, \(.stats.failed) failed)"'
+          
+          echo ""
+          echo "=== Summary ==="
+          echo '${{ steps.test-action.outputs.commits_data }}' | jq -r '"Total: \(.summary.total_commits) commits, \(.summary.successful_commits) fully successful, \(.summary.failed_commits) with failures"'

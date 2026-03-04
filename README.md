@@ -40,13 +40,53 @@ permissions:
 
 | Output | Description |
 |--------|-------------|
-| `duration_seconds` | Total wall-to-wall duration in seconds |
-| `commit_count` | Number of commits analyzed |
-| `total_checksuites` | Total number of checksuites found |
-| `successful_checksuites` | Number of successful checksuites |
-| `failed_checksuites` | Number of failed checksuites |
-| `cancelled_checksuites` | Number of cancelled checksuites |
-| `other_checksuites` | Number of checksuites with other conclusions |
+| `commits_data` | JSON object with per-commit analysis including duration, checksuites, and summary stats |
+| `commit_count` | Number of commits analyzed (legacy compatibility) |
+| `total_checksuites` | Total number of checksuites across all commits (legacy compatibility) |
+| `avg_duration_seconds` | Average duration across all commits (legacy compatibility) |
+
+#### Commits Data Structure
+
+The `commits_data` output contains detailed **per-commit** analysis showing how long each individual commit took for all checksuites to complete:
+
+```json
+{
+  "commits": [
+    {
+      "commit": {
+        "sha": "abc123def456",
+        "timestamp": "2024-03-04T12:00:00Z",
+        "committer_email": "user@example.com",
+        "url": "https://github.com/owner/repo/commit/abc123def456"
+      },
+      "checksuites": [
+        {
+          "id": 12345,
+          "status": "completed",
+          "conclusion": "success",
+          "created_at": "2024-03-04T12:01:00Z",
+          "updated_at": "2024-03-04T12:05:30Z"
+        }
+      ],
+      "duration_seconds": 270,
+      "stats": {
+        "total": 3,
+        "successful": 2,
+        "failed": 1,
+        "cancelled": 0,
+        "other": 0
+      }
+    }
+  ],
+  "summary": {
+    "total_commits": 2,
+    "successful_commits": 1,
+    "failed_commits": 1
+  }
+}
+```
+
+**Key Insight**: Each commit gets its own `duration_seconds` representing the **wall-to-wall time** from when the first checksuite started to when the last checksuite finished for that specific commit. This answers: *"How long did the engineer wait after this commit was merged for all checks to complete?"*
 
 ### Example Workflow
 
@@ -70,11 +110,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Track Checksuite Duration
+        id: timer
         uses: your-username/checksuite-timer@v1
         with:
           branch: 'main'
           time_window: '24h'
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Process commit data
+        run: |
+          echo "Commits analyzed: ${{ steps.timer.outputs.commit_count }}"
+          echo "Average duration: ${{ steps.timer.outputs.avg_duration_seconds }} seconds"
+          
+          # Display per-commit analysis
+          echo '${{ steps.timer.outputs.commits_data }}' | jq -r '.commits[] | "Commit \(.commit.sha): \(.duration_seconds)s wait time, \(.stats.total) checksuites (\(.stats.successful) successful, \(.stats.failed) failed)"'
+          
+          # Display summary
+          echo '${{ steps.timer.outputs.commits_data }}' | jq -r '"Summary: \(.summary.successful_commits)/\(.summary.total_commits) commits had no failures"'
 ```
 
 ### Time Window Format

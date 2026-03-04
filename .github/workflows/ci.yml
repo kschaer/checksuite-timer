@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+          
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+        
+      - name: Run linting
+        run: yarn lint
+        
+      - name: Check formatting
+        run: yarn format-check
+        
+      - name: Run tests
+        run: yarn test
+        
+      - name: Build
+        run: yarn build
+        
+      - name: Check dist is up to date
+        run: |
+          if [ "$(git diff --ignore-space-at-eol dist/ | wc -l)" -gt "0" ]; then
+            echo "Detected uncommitted changes after build. See status below:"
+            git diff
+            exit 1
+          fi
+          
+  # Integration test using the action
+  test-action:
+    runs-on: ubuntu-latest
+    needs: test
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Test action
+        id: test
+        uses: ./
+        with:
+          branch: 'main'
+          time_window: '24h'
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Verify outputs
+        run: |
+          echo "Duration: ${{ steps.test.outputs.duration_seconds }} seconds"
+          echo "Commits: ${{ steps.test.outputs.commit_count }}"
+          echo "Total checksuites: ${{ steps.test.outputs.total_checksuites }}"
