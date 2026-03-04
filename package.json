@@ -11,7 +11,6 @@
     "package": "yarn build",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
     "all": "yarn build && yarn format && yarn lint && yarn test && yarn package"
   },
   "repository": {
