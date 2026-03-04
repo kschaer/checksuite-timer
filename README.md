@@ -41,9 +41,9 @@ permissions:
 | Output | Description |
 |--------|-------------|
 | `commits_data` | JSON object with per-commit analysis including duration, checksuites, and summary stats |
-| `commit_count` | Number of commits analyzed (legacy compatibility) |
-| `total_checksuites` | Total number of checksuites across all commits (legacy compatibility) |
-| `avg_duration_seconds` | Average duration across all commits (legacy compatibility) |
+| `commit_count` | Number of commits analyzed |
+| `total_checksuites` | Total number of checksuites across all commits |
+| `avg_duration_seconds` | Average duration across all commits in seconds |
 
 #### Commits Data Structure
 

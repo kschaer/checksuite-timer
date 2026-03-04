@@ -20,6 +20,16 @@ describe('parseTimeWindow', () => {
 
   const testCases = [
     {
+      input: '7d',
+      description: '7 days',
+      expectedDaysAgo: 7
+    },
+    {
+      input: '1d',
+      description: '1 day',
+      expectedDaysAgo: 1
+    },
+    {
       input: '24h',
       description: '24 hours',
       expectedHoursAgo: 24
@@ -51,11 +61,12 @@ describe('parseTimeWindow', () => {
     }
   ]
 
-  test.each(testCases)('parseTimeWindow("$input") should return date $expectedHoursAgo hours/$expectedMinutesAgo minutes ago', 
-    ({ input, expectedHoursAgo, expectedMinutesAgo }) => {
+  test.each(testCases)('parseTimeWindow("$input") should return date $expectedDaysAgo days/$expectedHoursAgo hours/$expectedMinutesAgo minutes ago', 
+    ({ input, expectedDaysAgo, expectedHoursAgo, expectedMinutesAgo }) => {
       const result = parseTimeWindow(input)
       const now = new Date()
       const expected = new Date(now.getTime() - 
+        ((expectedDaysAgo || 0) * 24 * 60 * 60 * 1000) -
         ((expectedHoursAgo || 0) * 60 * 60 * 1000) - 
         ((expectedMinutesAgo || 0) * 60 * 1000)
       )

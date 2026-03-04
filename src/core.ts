@@ -57,17 +57,19 @@ export interface AnalysisResult {
 // Pure function: Time window parsing
 export function parseTimeWindow(timeWindow: string): Date {
   const now = new Date()
-  const regex = /^(\d+)([hm])$/
+  const regex = /^(\d+)([dhm])$/
   const match = timeWindow.match(regex)
   
   if (!match) {
-    throw new Error(`Invalid time window format: ${timeWindow}. Expected format like '24h', '12h', '30m'`)
+    throw new Error(`Invalid time window format: ${timeWindow}. Expected format like '7d', '24h', '12h', '30m'`)
   }
   
   const value = parseInt(match[1], 10)
   const unit = match[2]
   
-  if (unit === 'h') {
+  if (unit === 'd') {
+    return new Date(now.getTime() - value * 24 * 60 * 60 * 1000)
+  } else if (unit === 'h') {
     return new Date(now.getTime() - value * 60 * 60 * 1000)
   } else if (unit === 'm') {
     return new Date(now.getTime() - value * 60 * 1000)

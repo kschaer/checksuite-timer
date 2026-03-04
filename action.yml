@@ -20,11 +20,11 @@ outputs:
   commits_data:
     description: 'JSON object with per-commit analysis including duration, checksuites, and summary stats'
   commit_count:
-    description: 'Number of commits analyzed (legacy compatibility)'
+    description: 'Number of commits analyzed'
   total_checksuites:
-    description: 'Total number of checksuites across all commits (legacy compatibility)'
+    description: 'Total number of checksuites across all commits'
   avg_duration_seconds:
-    description: 'Average duration across all commits (legacy compatibility)'
+    description: 'Average duration across all commits in seconds'
 
 runs:
   using: 'node20'

@@ -46,7 +46,7 @@ export function setActionOutputs(result: AnalysisResult): void {
   // Primary output: structured per-commit data
   core.setOutput('commits_data', JSON.stringify(result))
   
-  // Legacy outputs for backwards compatibility
+  // Summary outputs for convenience
   const totalChecksuites = result.commits.reduce((sum, analysis) => sum + analysis.stats.total, 0)
   const avgDuration = result.commits.length > 0 
     ? Math.round(result.commits.reduce((sum, analysis) => sum + analysis.duration_seconds, 0) / result.commits.length)
