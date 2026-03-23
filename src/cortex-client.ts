@@ -1,12 +1,16 @@
 import * as core from '@actions/core'
 import { CortexDeployPayload, CortexDeployResponse } from './core'
 
-// Cortex API response types
+// Cortex API response types based on official API spec
+// https://docs.cortex.io/api/readme/deploys
 export interface CortexDeploy {
+  // Required fields
   uuid: string
-  timestamp: string
+  timestamp: string // ISO 8601 date-time
   title: string
-  type: string
+  type: 'DEPLOY' | 'SCALE' | 'ROLLBACK' | 'RESTART'
+
+  // Optional fields
   environment?: string
   sha?: string
   url?: string
@@ -15,13 +19,18 @@ export interface CortexDeploy {
     name?: string
     email?: string
   }
+  // Deprecated fields (not used)
+  deployerEmail?: string
+  deployerName?: string
 }
 
+// Response from GET /api/v1/catalog/{tag}/deploys
+// API type: CustomDeployListPaginatedResponse
 export interface CortexDeploysResponse {
-  deployments: CortexDeploy[]
-  page: number
-  totalPages: number
-  total: number
+  deployments: CortexDeploy[] // Required
+  page: number // Required, int32
+  totalPages: number // Required, int32
+  total: number // Required, int32
 }
 
 // Interface for Cortex API operations - easily mockable for testing
@@ -62,26 +71,36 @@ export class CortexApiClient implements CortexClient {
       await this.handleErrorResponse(response, entityId)
     }
 
-    const data = (await response.json()) as any
+    // According to API spec, all fields are required
+    // But we add defensive handling for robustness
+    const data = (await response.json()) as CortexDeploysResponse
 
-    // Defensive handling: ensure the response has the expected structure
+    // Defensive: handle null or malformed responses
     if (!data || typeof data !== 'object') {
-      core.debug(
-        `Unexpected Cortex API response format: ${JSON.stringify(data)}`
+      core.warning(
+        `Cortex API returned invalid response (expected object, got ${typeof data})`
       )
       return {
         deployments: [],
-        page: 0,
+        page,
         totalPages: 0,
         total: 0
       }
     }
 
-    // Return with defaults for missing fields
+    // Defensive: ensure deployments is an array
+    if (!Array.isArray(data.deployments)) {
+      core.warning(
+        `Cortex API returned invalid deployments field (expected array, got ${typeof data.deployments})`
+      )
+      data.deployments = []
+    }
+
+    // Ensure numeric fields have defaults
     return {
-      deployments: Array.isArray(data.deployments) ? data.deployments : [],
+      deployments: data.deployments,
       page: typeof data.page === 'number' ? data.page : page,
-      totalPages: typeof data.totalPages === 'number' ? data.totalPages : 1,
+      totalPages: typeof data.totalPages === 'number' ? data.totalPages : 0,
       total: typeof data.total === 'number' ? data.total : 0
     }
   }

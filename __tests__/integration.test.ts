@@ -171,6 +171,7 @@ describe('Integration Tests', () => {
         successful: 1,
         failed: 1,
         cancelled: 0,
+        skipped: 0,
         other: 0
       })
 
@@ -182,6 +183,7 @@ describe('Integration Tests', () => {
         successful: 1,
         failed: 0,
         cancelled: 0,
+        skipped: 0,
         other: 0
       })
 

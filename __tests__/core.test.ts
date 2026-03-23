@@ -101,12 +101,26 @@ describe('calculateCheckSuiteStats', () => {
     {
       name: 'empty array',
       checkSuites: [],
-      expected: { total: 0, successful: 0, failed: 0, cancelled: 0, other: 0 }
+      expected: {
+        total: 0,
+        successful: 0,
+        failed: 0,
+        cancelled: 0,
+        skipped: 0,
+        other: 0
+      }
     },
     {
       name: 'all successful',
       checkSuites: [{ conclusion: 'success' }, { conclusion: 'success' }],
-      expected: { total: 2, successful: 2, failed: 0, cancelled: 0, other: 0 }
+      expected: {
+        total: 2,
+        successful: 2,
+        failed: 0,
+        cancelled: 0,
+        skipped: 0,
+        other: 0
+      }
     },
     {
       name: 'mixed results',
@@ -116,7 +130,14 @@ describe('calculateCheckSuiteStats', () => {
         { conclusion: 'cancelled' },
         { conclusion: 'neutral' }
       ],
-      expected: { total: 4, successful: 1, failed: 1, cancelled: 1, other: 1 }
+      expected: {
+        total: 4,
+        successful: 1,
+        failed: 1,
+        cancelled: 1,
+        skipped: 0,
+        other: 1
+      }
     },
     {
       name: 'different failure types',
@@ -125,7 +146,14 @@ describe('calculateCheckSuiteStats', () => {
         { conclusion: 'startup_failure' },
         { conclusion: 'timed_out' }
       ],
-      expected: { total: 3, successful: 0, failed: 3, cancelled: 0, other: 0 }
+      expected: {
+        total: 3,
+        successful: 0,
+        failed: 3,
+        cancelled: 0,
+        skipped: 0,
+        other: 0
+      }
     },
     {
       name: 'null conclusions',
@@ -134,7 +162,14 @@ describe('calculateCheckSuiteStats', () => {
         { conclusion: undefined },
         { conclusion: 'skipped' }
       ],
-      expected: { total: 3, successful: 0, failed: 0, cancelled: 0, other: 3 }
+      expected: {
+        total: 3,
+        successful: 0,
+        failed: 0,
+        cancelled: 0,
+        skipped: 1,
+        other: 2
+      }
     }
   ]
 
@@ -324,6 +359,7 @@ describe('createCortexDeployPayload', () => {
         successful: 2,
         failed: 1,
         cancelled: 0,
+        skipped: 0,
         other: 0
       }
     }
@@ -350,9 +386,6 @@ describe('createCortexDeployPayload', () => {
     )
     expect(payload.customData?.duration_ms).toBe(270)
     expect(payload.customData?.checksuite_stats).toEqual(analysis.stats)
-    expect(payload.customData?.total_checksuites).toBe(3)
-    expect(payload.customData?.successful_checksuites).toBe(2)
-    expect(payload.customData?.failed_checksuites).toBe(1)
   })
 
   test('handles custom title template with email', () => {

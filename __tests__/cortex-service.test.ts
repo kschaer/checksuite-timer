@@ -221,6 +221,7 @@ describe('CortexService', () => {
         successful: 1,
         failed: 0,
         cancelled: 0,
+        skipped: 0,
         other: 0
       }
     }
@@ -311,7 +312,14 @@ describe('CortexService', () => {
         },
         checksuites: [],
         duration_ms: 270,
-        stats: { total: 1, successful: 1, failed: 0, cancelled: 0, other: 0 }
+        stats: {
+          total: 1,
+          successful: 1,
+          failed: 0,
+          cancelled: 0,
+          skipped: 0,
+          other: 0
+        }
       },
       {
         commit: {
@@ -322,7 +330,14 @@ describe('CortexService', () => {
         },
         checksuites: [],
         duration_ms: 150,
-        stats: { total: 1, successful: 0, failed: 1, cancelled: 0, other: 0 }
+        stats: {
+          total: 1,
+          successful: 0,
+          failed: 1,
+          cancelled: 0,
+          skipped: 0,
+          other: 0
+        }
       },
       {
         commit: {
@@ -334,7 +349,14 @@ describe('CortexService', () => {
         checksuites: [],
         duration_ms: 200,
         error: 'API Error',
-        stats: { total: 0, successful: 0, failed: 0, cancelled: 0, other: 0 }
+        stats: {
+          total: 0,
+          successful: 0,
+          failed: 0,
+          cancelled: 0,
+          skipped: 0,
+          other: 0
+        }
       }
     ]
 

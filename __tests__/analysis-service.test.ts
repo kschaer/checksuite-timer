@@ -48,6 +48,7 @@ describe('AnalysisService', () => {
           successful: 1,
           failed: 0,
           cancelled: 0,
+          skipped: 0,
           other: 0
         },
         expectError: false
@@ -61,6 +62,7 @@ describe('AnalysisService', () => {
           successful: 0,
           failed: 0,
           cancelled: 0,
+          skipped: 0,
           other: 0
         },
         expectError: false
@@ -87,6 +89,7 @@ describe('AnalysisService', () => {
           successful: 1,
           failed: 1,
           cancelled: 0,
+          skipped: 0,
           other: 0
         },
         expectError: false
@@ -136,6 +139,7 @@ describe('AnalysisService', () => {
         successful: 0,
         failed: 0,
         cancelled: 0,
+        skipped: 0,
         other: 0
       })
 

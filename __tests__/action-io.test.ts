@@ -128,6 +128,7 @@ describe('action-io', () => {
               successful: 1,
               failed: 1,
               cancelled: 0,
+              skipped: 0,
               other: 0
             }
           },
@@ -145,6 +146,7 @@ describe('action-io', () => {
               successful: 1,
               failed: 0,
               cancelled: 0,
+              skipped: 0,
               other: 0
             }
           }
@@ -200,7 +202,14 @@ describe('action-io', () => {
         },
         checksuites: [],
         duration_ms: 300,
-        stats: { total: 2, successful: 1, failed: 1, cancelled: 0, other: 0 }
+        stats: {
+          total: 2,
+          successful: 1,
+          failed: 1,
+          cancelled: 0,
+          skipped: 0,
+          other: 0
+        }
       }
 
       const mockResult: AnalysisResult = {
@@ -229,7 +238,14 @@ describe('action-io', () => {
         },
         checksuites: [],
         duration_ms: 0,
-        stats: { total: 0, successful: 0, failed: 0, cancelled: 0, other: 0 },
+        stats: {
+          total: 0,
+          successful: 0,
+          failed: 0,
+          cancelled: 0,
+          skipped: 0,
+          other: 0
+        },
         error: 'API rate limit exceeded'
       }
 
@@ -258,7 +274,14 @@ describe('action-io', () => {
         },
         checksuites: [],
         duration_ms: 300,
-        stats: { total: 1, successful: 1, failed: 0, cancelled: 0, other: 0 }
+        stats: {
+          total: 1,
+          successful: 1,
+          failed: 0,
+          cancelled: 0,
+          skipped: 0,
+          other: 0
+        }
       }
 
       const failedCommit: CommitAnalysis = {
@@ -270,7 +293,14 @@ describe('action-io', () => {
         },
         checksuites: [],
         duration_ms: 0,
-        stats: { total: 0, successful: 0, failed: 0, cancelled: 0, other: 0 },
+        stats: {
+          total: 0,
+          successful: 0,
+          failed: 0,
+          cancelled: 0,
+          skipped: 0,
+          other: 0
+        },
         error: 'Network timeout'
       }
 

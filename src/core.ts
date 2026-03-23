@@ -34,6 +34,7 @@ export interface CheckSuiteStats {
   successful: number
   failed: number
   cancelled: number
+  skipped: number
   other: number
 }
 
@@ -89,6 +90,7 @@ export function calculateCheckSuiteStats(
     successful: 0,
     failed: 0,
     cancelled: 0,
+    skipped: 0,
     other: 0
   }
 
@@ -104,6 +106,9 @@ export function calculateCheckSuiteStats(
         break
       case 'cancelled':
         stats.cancelled++
+        break
+      case 'skipped':
+        stats.skipped++
         break
       default:
         stats.other++
@@ -236,10 +241,7 @@ export function createCortexDeployPayload(
     url: analysis.commit.url,
     customData: {
       duration_ms: analysis.duration_ms,
-      checksuite_stats: analysis.stats,
-      total_checksuites: analysis.stats.total,
-      successful_checksuites: analysis.stats.successful,
-      failed_checksuites: analysis.stats.failed
+      checksuite_stats: analysis.stats
     }
   }
 }
