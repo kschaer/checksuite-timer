@@ -18,12 +18,28 @@ export class AnalysisService {
     repo: string
   ): Promise<CommitAnalysis> {
     try {
-      // API call (mockable)
+      // Fetch check suites
       const checkSuites = await this.gitHubClient.getCheckSuites(
         owner,
         repo,
         commit.sha
       )
+
+      // Fetch check runs for each check suite to get workflow names
+      for (const suite of checkSuites) {
+        try {
+          const checkRuns = await this.gitHubClient.getCheckRuns(
+            owner,
+            repo,
+            suite.id
+          )
+          suite.check_runs = checkRuns
+        } catch (error) {
+          // If we can't fetch check runs, continue without them
+          // This shouldn't fail the entire commit analysis
+          suite.check_runs = []
+        }
+      }
 
       // Pure business logic (easily testable)
       return createCommitAnalysis(commit, checkSuites, owner, repo)

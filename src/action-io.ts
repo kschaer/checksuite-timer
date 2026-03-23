@@ -1,6 +1,7 @@
 import * as core from '@actions/core'
 import * as github from '@actions/github'
-import { AnalysisResult } from './core'
+import { AnalysisResult, CortexConfig } from './core'
+import { DeploysResult } from './cortex-service'
 
 // Input configuration interface
 export interface ActionInputs {
@@ -55,7 +56,7 @@ export function setActionOutputs(result: AnalysisResult): void {
     result.commits.length > 0
       ? Math.round(
           result.commits.reduce(
-            (sum, analysis) => sum + analysis.duration_seconds,
+            (sum, analysis) => sum + analysis.duration_ms,
             0
           ) / result.commits.length
         )
@@ -63,7 +64,7 @@ export function setActionOutputs(result: AnalysisResult): void {
 
   core.setOutput('commit_count', result.commits.length.toString())
   core.setOutput('total_checksuites', totalChecksuites.toString())
-  core.setOutput('avg_duration_seconds', avgDuration.toString())
+  core.setOutput('avg_duration_ms', avgDuration.toString())
 }
 
 // Log analysis results - testable by mocking core.info/warning
@@ -80,8 +81,45 @@ export function logAnalysisResults(result: AnalysisResult): void {
       )
     } else {
       core.info(
-        `Commit ${analysis.commit.sha}: ${analysis.duration_seconds}s duration, ${analysis.stats.total} checksuites (${analysis.stats.successful} successful, ${analysis.stats.failed} failed)`
+        `Commit ${analysis.commit.sha}: ${analysis.duration_ms}ms duration, ${analysis.stats.total} checksuites (${analysis.stats.successful} successful, ${analysis.stats.failed} failed)`
       )
     }
   }
+}
+
+// Parse Cortex configuration from inputs
+export function parseCortexConfig(): CortexConfig | null {
+  const apiKey = core.getInput('cortex_api_key')
+
+  // If no API key provided, Cortex integration is disabled
+  if (!apiKey) {
+    return null
+  }
+
+  const entityId = core.getInput('cortex_entity_id')
+  if (!entityId) {
+    throw new Error(
+      'cortex_entity_id is required when cortex_api_key is provided'
+    )
+  }
+
+  const environment = core.getInput('cortex_environment') || 'production'
+  const titleTemplate =
+    core.getInput('cortex_deploy_title_template') || 'Deploy {sha} to {branch}'
+  const postPerCommit = core.getInput('cortex_post_per_commit') !== 'false'
+
+  return {
+    apiKey,
+    entityId,
+    environment,
+    titleTemplate,
+    postPerCommit
+  }
+}
+
+// Log Cortex posting results
+export function logCortexResults(results: DeploysResult): void {
+  core.info(
+    `Cortex posting complete: ${results.created} created, ${results.updated} updated, ${results.failed} failed, ${results.skipped} skipped out of ${results.total} total commits`
+  )
 }

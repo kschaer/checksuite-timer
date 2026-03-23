@@ -44,7 +44,8 @@ describe('Integration Tests', () => {
           listCommits: jest.fn()
         },
         checks: {
-          listSuitesForRef: jest.fn()
+          listSuitesForRef: jest.fn(),
+          listForSuite: jest.fn()
         }
       }
     }
@@ -86,7 +87,9 @@ describe('Integration Tests', () => {
           conclusion: 'success',
           created_at: '2024-01-01T10:01:00Z',
           updated_at: '2024-01-01T10:05:00Z',
-          head_sha: 'commit1'
+          head_sha: 'commit1',
+          head_branch: 'main',
+          app: { name: 'GitHub Actions' }
         },
         {
           id: 2,
@@ -94,7 +97,9 @@ describe('Integration Tests', () => {
           conclusion: 'failure',
           created_at: '2024-01-01T10:02:00Z',
           updated_at: '2024-01-01T10:08:00Z',
-          head_sha: 'commit1'
+          head_sha: 'commit1',
+          head_branch: 'main',
+          app: { name: 'GitHub Actions' }
         }
       ]
 
@@ -105,7 +110,9 @@ describe('Integration Tests', () => {
           conclusion: 'success',
           created_at: '2024-01-01T11:01:00Z',
           updated_at: '2024-01-01T11:03:00Z',
-          head_sha: 'commit2'
+          head_sha: 'commit2',
+          head_branch: 'main',
+          app: { name: 'GitHub Actions' }
         }
       ]
 
@@ -115,6 +122,54 @@ describe('Integration Tests', () => {
       mockOctokit.rest.checks.listSuitesForRef
         .mockResolvedValueOnce({ data: { check_suites: mockCheckSuites1 } })
         .mockResolvedValueOnce({ data: { check_suites: mockCheckSuites2 } })
+
+      // Mock check runs for each suite
+      mockOctokit.rest.checks.listForSuite
+        .mockResolvedValueOnce({
+          data: {
+            check_runs: [
+              {
+                id: 101,
+                name: 'CI Tests',
+                status: 'completed',
+                conclusion: 'success',
+                started_at: '2024-01-01T10:01:00Z',
+                completed_at: '2024-01-01T10:05:00Z',
+                head_sha: 'commit1'
+              }
+            ]
+          }
+        })
+        .mockResolvedValueOnce({
+          data: {
+            check_runs: [
+              {
+                id: 102,
+                name: 'Build',
+                status: 'completed',
+                conclusion: 'failure',
+                started_at: '2024-01-01T10:02:00Z',
+                completed_at: '2024-01-01T10:08:00Z',
+                head_sha: 'commit1'
+              }
+            ]
+          }
+        })
+        .mockResolvedValueOnce({
+          data: {
+            check_runs: [
+              {
+                id: 103,
+                name: 'Deploy',
+                status: 'completed',
+                conclusion: 'success',
+                started_at: '2024-01-01T11:01:00Z',
+                completed_at: '2024-01-01T11:03:00Z',
+                head_sha: 'commit2'
+              }
+            ]
+          }
+        })
 
       await run()
 
@@ -148,7 +203,7 @@ describe('Integration Tests', () => {
       expect(mockCore.setOutput).toHaveBeenCalledWith('commit_count', '2')
       expect(mockCore.setOutput).toHaveBeenCalledWith('total_checksuites', '3')
       expect(mockCore.setOutput).toHaveBeenCalledWith(
-        'avg_duration_seconds',
+        'avg_duration_ms',
         expect.any(String)
       )
 
@@ -165,24 +220,38 @@ describe('Integration Tests', () => {
 
       // Verify first commit analysis
       expect(result.commits[0].commit.sha).toBe('commit1')
-      expect(result.commits[0].duration_seconds).toBe(420) // 7 minutes (10:01 to 10:08)
+      expect(result.commits[0].duration_ms).toBe(420000) // 7 minutes (10:01 to 10:08) in milliseconds
       expect(result.commits[0].stats).toEqual({
         total: 2,
         successful: 1,
         failed: 1,
         cancelled: 0,
-        other: 0
+        skipped: 0,
+        other: 0,
+        longest_checkrun: {
+          duration_ms: 360000, // 6 minutes (10:02 to 10:08)
+          name: 'Build',
+          status: 'completed',
+          conclusion: 'failure'
+        }
       })
 
       // Verify second commit analysis
       expect(result.commits[1].commit.sha).toBe('commit2')
-      expect(result.commits[1].duration_seconds).toBe(120) // 2 minutes (11:01 to 11:03)
+      expect(result.commits[1].duration_ms).toBe(120000) // 2 minutes (11:01 to 11:03) in milliseconds
       expect(result.commits[1].stats).toEqual({
         total: 1,
         successful: 1,
         failed: 0,
         cancelled: 0,
-        other: 0
+        skipped: 0,
+        other: 0,
+        longest_checkrun: {
+          duration_ms: 120000, // 2 minutes (11:01 to 11:03)
+          name: 'Deploy',
+          status: 'completed',
+          conclusion: 'success'
+        }
       })
 
       // Verify summary
@@ -296,14 +365,33 @@ describe('Integration Tests', () => {
             check_suites: [
               {
                 id: 1,
+                status: 'completed',
                 conclusion: 'success',
                 created_at: '2024-01-01T10:01:00Z',
-                updated_at: '2024-01-01T10:05:00Z'
+                updated_at: '2024-01-01T10:05:00Z',
+                app: { name: 'Tests' }
               }
             ]
           }
         })
         .mockRejectedValueOnce(new Error('Checksuite API error'))
+
+      // Mock check runs for the successful commit
+      mockOctokit.rest.checks.listForSuite.mockResolvedValue({
+        data: {
+          check_runs: [
+            {
+              id: 101,
+              name: 'Tests',
+              status: 'completed',
+              conclusion: 'success',
+              started_at: '2024-01-01T10:01:00Z',
+              completed_at: '2024-01-01T10:05:00Z',
+              head_sha: 'commit1'
+            }
+          ]
+        }
+      })
 
       await run()
 

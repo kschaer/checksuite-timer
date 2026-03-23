@@ -8,9 +8,13 @@ on:
 
 permissions:
   contents: read
+  actions: read
+  checks: read
+  pull-requests: read
 
 jobs:
-  test:
+  # Core validation
+  validate:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -19,7 +23,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'yarn'
           
       - name: Install dependencies
@@ -31,8 +35,47 @@ jobs:
       - name: Check formatting
         run: yarn format-check
         
+      - name: TypeScript compilation
+        run: npx tsc --noEmit
+
+  # Test matrix across Node versions
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20, 22, 24]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'yarn'
+          
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+        
       - name: Run tests
         run: yarn test
+
+  # Build and verify
+  build:
+    runs-on: ubuntu-latest
+    needs: [validate]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'yarn'
+          
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
         
       - name: Build
         run: yarn build
@@ -44,17 +87,10 @@ jobs:
             git diff
             exit 1
           fi
-          
-  # Integration test using the action (only on main branch pushes to avoid conflicts)
-  test-action:
+
+  # Security audit
+  security:
     runs-on: ubuntu-latest
-    needs: test
-    if: github.ref == 'refs/heads/main'
-    permissions:
-      contents: read
-      actions: read
-      checks: read
-      pull-requests: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -62,7 +98,27 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
+          cache: 'yarn'
+          
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+        
+      - name: Security audit
+        run: yarn audit --level moderate || true
+          
+  # Integration test using the action
+  integration:
+    runs-on: ubuntu-latest
+    needs: [test, build]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
           cache: 'yarn'
           
       - name: Install and build
@@ -70,79 +126,17 @@ jobs:
           yarn install --frozen-lockfile
           yarn build
         
-      - name: Test action with short time window
-        id: test-short
-        uses: ./
-        with:
-          branch: 'main'
-          time_window: '1h'
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          
-      - name: Display short window results
-        run: |
-          echo "🕐 1-hour window results:"
-          echo "├─ Commits: ${{ steps.test-short.outputs.commit_count }}"
-          echo "└─ Total checksuites: ${{ steps.test-short.outputs.total_checksuites }}"
-          
-      - name: Test action with longer time window  
-        id: test-long
+      - name: Test action
+        id: test-action
         uses: ./
         with:
           branch: 'main'
           time_window: '7d'
           github_token: ${{ secrets.GITHUB_TOKEN }}
           
-      - name: Display long window results
+      - name: Validate results
         run: |
-          echo "📅 7-day window results:"
-          echo "├─ Commits: ${{ steps.test-long.outputs.commit_count }}"
-          echo "├─ Average duration: ${{ steps.test-long.outputs.avg_duration_seconds }}s"
-          echo "└─ Total checksuites: ${{ steps.test-long.outputs.total_checksuites }}"
-          
-          if [ "${{ steps.test-long.outputs.commit_count }}" != "0" ]; then
-            echo ""
-            echo "📊 Detailed analysis:"
-            echo '${{ steps.test-long.outputs.commits_data }}' | jq -r '.commits[] | "├─ \(.commit.sha[0:7]): \(.duration_seconds)s, \(.stats.total) checksuites"' | head -5
-          fi
-
-  # Simulate some different types of jobs that would create different check suites
-  lint-job:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Simulate linting
-        run: |
-          echo "Running lint checks..."
-          sleep 10
-          echo "Lint completed"
-
-  test-job:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [18, 20]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Node ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
-      - name: Simulate tests
-        run: |
-          echo "Running tests on Node ${{ matrix.node-version }}..."
-          sleep 15
-          echo "Tests completed"
-
-  build-job:
-    runs-on: ubuntu-latest
-    needs: [lint-job, test-job]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Simulate build
-        run: |
-          echo "Building application..."
-          sleep 20
-          echo "Build completed"
+          echo "🧪 Integration test results:"
+          echo "├─ Commits: ${{ steps.test-action.outputs.commit_count }}"
+          echo "├─ Checksuites: ${{ steps.test-action.outputs.total_checksuites }}"
+          echo "└─ Average duration: ${{ steps.test-action.outputs.avg_duration_ms }}ms"

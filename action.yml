@@ -15,6 +15,24 @@ inputs:
     description: 'GitHub token with appropriate permissions (contents:read, actions:read)'
     required: true
     default: ${{ github.token }}
+  cortex_api_key:
+    description: 'Cortex API key for posting deploy events (optional - if not provided, Cortex integration is skipped)'
+    required: false
+  cortex_entity_id:
+    description: 'Cortex entity tag or ID to associate deploys with'
+    required: false
+  cortex_environment:
+    description: 'Environment name for the deploy (e.g., production, staging)'
+    required: false
+    default: 'production'
+  cortex_deploy_title_template:
+    description: 'Template for deploy title (supports {sha}, {branch}, {email})'
+    required: false
+    default: 'Deploy {sha} to {branch}'
+  cortex_post_per_commit:
+    description: 'Whether to post one deploy per commit (true) or skip on failures (false)'
+    required: false
+    default: 'true'
 
 outputs:
   commits_data:
@@ -23,11 +41,11 @@ outputs:
     description: 'Number of commits analyzed'
   total_checksuites:
     description: 'Total number of checksuites across all commits'
-  avg_duration_seconds:
-    description: 'Average duration across all commits in seconds'
+  avg_duration_ms:
+    description: 'Average duration across all commits in milliseconds'
 
 runs:
-  using: 'node20'
+  using: 'node24'
   main: 'dist/index.js'
 
 branding:

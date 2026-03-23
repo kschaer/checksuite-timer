@@ -23,7 +23,16 @@ on:
           - 'compare-time-windows'
           - 'debug-detailed'
           - 'performance-test'
+          - 'cortex-integration-test'
         default: 'basic-analysis'
+      cortex_entity_id:
+        description: 'Cortex entity ID (required for cortex-integration-test)'
+        required: false
+        default: ''
+      cortex_environment:
+        description: 'Cortex environment (for cortex-integration-test)'
+        required: false
+        default: 'staging'
 
 permissions:
   contents: read
@@ -42,7 +51,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'yarn'
           
       - name: Install and build
@@ -69,7 +78,7 @@ jobs:
           echo "**Summary:**"
           echo "- Commits Analyzed: ${{ steps.analysis.outputs.commit_count }}"
           echo "- Total Checksuites: ${{ steps.analysis.outputs.total_checksuites }}"
-          echo "- Average Duration: ${{ steps.analysis.outputs.avg_duration_seconds }} seconds"
+          echo "- Average Duration: ${{ steps.analysis.outputs.avg_duration_ms }}ms"
           
       - name: Detailed Analysis
         run: |
@@ -80,7 +89,7 @@ jobs:
               "### Commit: \(.commit.sha[0:7])
               - **Author**: \(.commit.committer_email)  
               - **Timestamp**: \(.commit.timestamp)
-              - **Duration**: \(.duration_seconds) seconds (\(.duration_seconds / 60 | floor) min \(.duration_seconds % 60) sec)
+              - **Duration**: \(.duration_ms)ms (\(.duration_ms / 1000 / 60 | floor) min \(.duration_ms / 1000 % 60 | floor) sec)
               - **Checksuites**: \(.stats.total) total (\(.stats.successful) successful, \(.stats.failed) failed, \(.stats.cancelled) cancelled)
               - **URL**: \(.commit.url)
               "
@@ -106,7 +115,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'yarn'
           
       - name: Install and build
@@ -144,9 +153,9 @@ jobs:
           echo ""
           echo "| Time Window | Commits | Avg Duration | Total Checksuites |"
           echo "|-------------|---------|--------------|-------------------|"
-          echo "| 1 hour      | ${{ steps.analysis-1h.outputs.commit_count }} | ${{ steps.analysis-1h.outputs.avg_duration_seconds }}s | ${{ steps.analysis-1h.outputs.total_checksuites }} |"
-          echo "| 24 hours    | ${{ steps.analysis-24h.outputs.commit_count }} | ${{ steps.analysis-24h.outputs.avg_duration_seconds }}s | ${{ steps.analysis-24h.outputs.total_checksuites }} |"
-          echo "| 7 days      | ${{ steps.analysis-7d.outputs.commit_count }} | ${{ steps.analysis-7d.outputs.avg_duration_seconds }}s | ${{ steps.analysis-7d.outputs.total_checksuites }} |"
+          echo "| 1 hour      | ${{ steps.analysis-1h.outputs.commit_count }} | ${{ steps.analysis-1h.outputs.avg_duration_ms }}ms | ${{ steps.analysis-1h.outputs.total_checksuites }} |"
+          echo "| 24 hours    | ${{ steps.analysis-24h.outputs.commit_count }} | ${{ steps.analysis-24h.outputs.avg_duration_ms }}ms | ${{ steps.analysis-24h.outputs.total_checksuites }} |"
+          echo "| 7 days      | ${{ steps.analysis-7d.outputs.commit_count }} | ${{ steps.analysis-7d.outputs.avg_duration_ms }}ms | ${{ steps.analysis-7d.outputs.total_checksuites }} |"
 
   performance-test:
     if: ${{ inputs.test_scenario == 'performance-test' }}
@@ -158,7 +167,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'yarn'
           
       - name: Install and build
@@ -183,3 +192,75 @@ jobs:
           INPUT_TIME_WINDOW: ${{ inputs.time_window }}
           INPUT_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
+
+  cortex-integration-test:
+    if: ${{ inputs.test_scenario == 'cortex-integration-test' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'yarn'
+
+      - name: Install and build
+        run: |
+          yarn install --frozen-lockfile
+          yarn build
+
+      - name: Run Checksuite Timer with Cortex Integration
+        id: analysis
+        uses: ./
+        with:
+          branch: ${{ inputs.branch }}
+          time_window: ${{ inputs.time_window }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          cortex_api_key: ${{ secrets.CORTEX_API_KEY }}
+          cortex_entity_id: ${{ inputs.cortex_entity_id }}
+          cortex_environment: ${{ inputs.cortex_environment }}
+
+      - name: Display Results
+        run: |
+          echo "## 📊 Checksuite Analysis with Cortex Integration"
+          echo ""
+          echo "**Configuration:**"
+          echo "- Branch: ${{ inputs.branch }}"
+          echo "- Time Window: ${{ inputs.time_window }}"
+          echo "- Cortex Entity: ${{ inputs.cortex_entity_id }}"
+          echo "- Cortex Environment: ${{ inputs.cortex_environment }}"
+          echo ""
+          echo "**Summary:**"
+          echo "- Commits Analyzed: ${{ steps.analysis.outputs.commit_count }}"
+          echo "- Total Checksuites: ${{ steps.analysis.outputs.total_checksuites }}"
+          echo "- Average Duration: ${{ steps.analysis.outputs.avg_duration_ms }}ms"
+          echo ""
+          echo "✅ Check your Cortex.io dashboard to verify deploy events were created/updated!"
+          echo ""
+          echo "**Expected in Cortex:**"
+          echo "- Deploy events for each commit in the time window"
+          echo "- Each deploy should include duration_ms in customData"
+          echo "- Re-running this workflow should UPDATE existing deploys (idempotency)"
+
+      - name: Display Deploy Data Sample
+        if: ${{ steps.analysis.outputs.commit_count != '0' }}
+        run: |
+          echo "## 🔍 Sample Deploy Data Posted to Cortex"
+          echo ""
+          echo "First commit's deploy data structure:"
+          echo '${{ steps.analysis.outputs.commits_data }}' | jq -r '
+            .commits[0] |
+            "**Commit**: \(.commit.sha[0:7])
+            **Timestamp**: \(.commit.timestamp)
+            **Duration**: \(.duration_ms)ms
+            **Deployer Email**: \(.commit.committer_email)
+            **Checksuites**: \(.stats.total) total (\(.stats.successful) ✓, \(.stats.failed) ✗)
+
+            This data was posted to Cortex with:
+            - environment: ${{ inputs.cortex_environment }}
+            - customData.duration_ms: \(.duration_ms)
+            - customData.checksuite_stats: \(.stats)
+            "
+          '
