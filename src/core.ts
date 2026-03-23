@@ -40,7 +40,7 @@ export interface CheckSuiteStats {
 export interface CommitAnalysis {
   commit: CommitData
   checksuites: CheckSuite[]
-  duration_seconds: number
+  duration_ms: number
   stats: CheckSuiteStats
   error?: string
 }
@@ -114,7 +114,7 @@ export function calculateCheckSuiteStats(
   return stats
 }
 
-// Pure function: Wall-to-wall duration calculation
+// Pure function: Wall-to-wall duration calculation (in milliseconds)
 export function calculateWallToWallDuration(checkSuites: CheckSuite[]): number {
   if (checkSuites.length === 0) {
     return 0
@@ -130,7 +130,7 @@ export function calculateWallToWallDuration(checkSuites: CheckSuite[]): number {
   const earliestStart = Math.min(...createdTimes)
   const latestEnd = Math.max(...updatedTimes)
 
-  return Math.round((latestEnd - earliestStart) / 1000)
+  return latestEnd - earliestStart
 }
 
 // Pure function: Commit data formatting
@@ -162,7 +162,7 @@ export function createCommitAnalysis(
   return {
     commit: commitData,
     checksuites: checkSuites,
-    duration_seconds: duration,
+    duration_ms: duration,
     stats,
     error
   }
@@ -235,7 +235,7 @@ export function createCortexDeployPayload(
     sha: analysis.commit.sha,
     url: analysis.commit.url,
     customData: {
-      duration_seconds: analysis.duration_seconds,
+      duration_ms: analysis.duration_ms,
       checksuite_stats: analysis.stats,
       total_checksuites: analysis.stats.total,
       successful_checksuites: analysis.stats.successful,

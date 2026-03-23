@@ -159,7 +159,7 @@ describe('calculateWallToWallDuration', () => {
           updated_at: '2024-01-01T10:05:00Z'
         }
       ],
-      expected: 300 // 5 minutes
+      expected: 300000 // 5 minutes in milliseconds
     },
     {
       name: 'multiple overlapping checksuites',
@@ -173,7 +173,7 @@ describe('calculateWallToWallDuration', () => {
           updated_at: '2024-01-01T10:08:00Z'
         }
       ],
-      expected: 480 // 8 minutes (10:00 to 10:08)
+      expected: 480000 // 8 minutes (10:00 to 10:08) in milliseconds
     },
     {
       name: 'checksuites with gaps',
@@ -187,7 +187,7 @@ describe('calculateWallToWallDuration', () => {
           updated_at: '2024-01-01T10:07:00Z'
         }
       ],
-      expected: 420 // 7 minutes (10:00 to 10:07, including gap)
+      expected: 420000 // 7 minutes (10:00 to 10:07, including gap) in milliseconds
     },
     {
       name: 'same start and end times',
@@ -207,7 +207,7 @@ describe('calculateWallToWallDuration', () => {
           updated_at: '2024-01-01T11:30:00Z'
         }
       ],
-      expected: 9000 // 2.5 hours
+      expected: 9000000 // 2.5 hours in milliseconds
     }
   ]
 
@@ -318,7 +318,7 @@ describe('createCortexDeployPayload', () => {
         url: 'https://github.com/owner/repo/commit/abc123def456'
       },
       checksuites: [],
-      duration_seconds: 270,
+      duration_ms: 270,
       stats: {
         total: 3,
         successful: 2,
@@ -348,7 +348,7 @@ describe('createCortexDeployPayload', () => {
     expect(payload.url).toBe(
       'https://github.com/owner/repo/commit/abc123def456'
     )
-    expect(payload.customData?.duration_seconds).toBe(270)
+    expect(payload.customData?.duration_ms).toBe(270)
     expect(payload.customData?.checksuite_stats).toEqual(analysis.stats)
     expect(payload.customData?.total_checksuites).toBe(3)
     expect(payload.customData?.successful_checksuites).toBe(2)
@@ -364,7 +364,7 @@ describe('createCortexDeployPayload', () => {
         url: 'https://github.com/owner/repo/commit/xyz789'
       },
       checksuites: [],
-      duration_seconds: 100,
+      duration_ms: 100,
       stats: { total: 1, successful: 1, failed: 0, cancelled: 0, other: 0 }
     }
 
@@ -394,7 +394,7 @@ describe('createCortexDeployPayload', () => {
         url: 'https://github.com/owner/repo/commit/abc123'
       },
       checksuites: [],
-      duration_seconds: 50,
+      duration_ms: 50,
       stats: { total: 0, successful: 0, failed: 0, cancelled: 0, other: 0 }
     }
 

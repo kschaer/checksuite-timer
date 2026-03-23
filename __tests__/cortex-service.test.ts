@@ -215,7 +215,7 @@ describe('CortexService', () => {
         url: 'https://github.com/owner/repo/commit/abc123'
       },
       checksuites: [],
-      duration_seconds: 270,
+      duration_ms: 270,
       stats: {
         total: 1,
         successful: 1,
@@ -310,7 +310,7 @@ describe('CortexService', () => {
           url: 'https://github.com/owner/repo/commit/abc123'
         },
         checksuites: [],
-        duration_seconds: 270,
+        duration_ms: 270,
         stats: { total: 1, successful: 1, failed: 0, cancelled: 0, other: 0 }
       },
       {
@@ -321,7 +321,7 @@ describe('CortexService', () => {
           url: 'https://github.com/owner/repo/commit/def456'
         },
         checksuites: [],
-        duration_seconds: 150,
+        duration_ms: 150,
         stats: { total: 1, successful: 0, failed: 1, cancelled: 0, other: 0 }
       },
       {
@@ -332,7 +332,7 @@ describe('CortexService', () => {
           url: 'https://github.com/owner/repo/commit/ghi789'
         },
         checksuites: [],
-        duration_seconds: 200,
+        duration_ms: 200,
         error: 'API Error',
         stats: { total: 0, successful: 0, failed: 0, cancelled: 0, other: 0 }
       }

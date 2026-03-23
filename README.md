@@ -61,7 +61,7 @@ This action can optionally post deploy events to [Cortex.io](https://www.getcort
 | `commits_data` | JSON object with per-commit analysis including duration, checksuites, and summary stats |
 | `commit_count` | Number of commits analyzed |
 | `total_checksuites` | Total number of checksuites across all commits |
-| `avg_duration_seconds` | Average duration across all commits in seconds |
+| `avg_duration_ms` | Average duration across all commits in milliseconds |
 
 #### Commits Data Structure
 
@@ -86,7 +86,7 @@ The `commits_data` output contains detailed **per-commit** analysis showing how 
           "updated_at": "2024-03-04T12:05:30Z"
         }
       ],
-      "duration_seconds": 270,
+      "duration_ms": 270000,
       "stats": {
         "total": 3,
         "successful": 2,
@@ -104,7 +104,7 @@ The `commits_data` output contains detailed **per-commit** analysis showing how 
 }
 ```
 
-**Key Insight**: Each commit gets its own `duration_seconds` representing the **wall-to-wall time** from when the first checksuite started to when the last checksuite finished for that specific commit. This answers: *"How long did the engineer wait after this commit was merged for all checks to complete?"*
+**Key Insight**: Each commit gets its own `duration_ms` representing the **wall-to-wall time** from when the first checksuite started to when the last checksuite finished for that specific commit. This answers: *"How long did the engineer wait after this commit was merged for all checks to complete?"*
 
 ### Example Workflow
 
@@ -138,10 +138,10 @@ jobs:
       - name: Process commit data
         run: |
           echo "Commits analyzed: ${{ steps.timer.outputs.commit_count }}"
-          echo "Average duration: ${{ steps.timer.outputs.avg_duration_seconds }} seconds"
+          echo "Average duration: ${{ steps.timer.outputs.avg_duration_ms }}ms"
           
           # Display per-commit analysis
-          echo '${{ steps.timer.outputs.commits_data }}' | jq -r '.commits[] | "Commit \(.commit.sha): \(.duration_seconds)s wait time, \(.stats.total) checksuites (\(.stats.successful) successful, \(.stats.failed) failed)"'
+          echo '${{ steps.timer.outputs.commits_data }}' | jq -r '.commits[] | "Commit \(.commit.sha): \(.duration_ms)ms wait time, \(.stats.total) checksuites (\(.stats.successful) successful, \(.stats.failed) failed)"'
           
           # Display summary
           echo '${{ steps.timer.outputs.commits_data }}' | jq -r '"Summary: \(.summary.successful_commits)/\(.summary.total_commits) commits had no failures"'
@@ -205,7 +205,7 @@ Each commit creates or updates a deploy event in Cortex with:
 - **sha**: Full commit SHA
 - **url**: GitHub commit URL
 - **customData**:
-  - `duration_seconds`: Wall-to-wall checksuite duration
+  - `duration_ms`: Wall-to-wall checksuite duration
   - `checksuite_stats`: Breakdown of success/failure counts
   - `total_checksuites`: Total number of checksuites
   - `successful_checksuites`: Number of successful checksuites
@@ -226,7 +226,7 @@ Each commit creates or updates a deploy event in Cortex with:
   "sha": "abc123def456",
   "url": "https://github.com/owner/repo/commit/abc123def456",
   "customData": {
-    "duration_seconds": 270,
+    "duration_ms": 270000,
     "checksuite_stats": {
       "total": 3,
       "successful": 2,

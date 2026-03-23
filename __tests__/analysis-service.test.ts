@@ -42,7 +42,7 @@ describe('AnalysisService', () => {
             head_sha: 'abc123'
           }
         ] as CheckSuite[],
-        expectedDuration: 240, // 4 minutes
+        expectedDuration: 240000, // 4 minutes in milliseconds
         expectedStats: {
           total: 1,
           successful: 1,
@@ -81,7 +81,7 @@ describe('AnalysisService', () => {
             updated_at: '2024-01-01T10:08:00Z'
           }
         ] as CheckSuite[],
-        expectedDuration: 480, // 8 minutes (10:00 to 10:08)
+        expectedDuration: 480000, // 8 minutes (10:00 to 10:08) in milliseconds
         expectedStats: {
           total: 2,
           successful: 1,
@@ -110,7 +110,7 @@ describe('AnalysisService', () => {
         expect(result.commit.url).toBe(
           'https://github.com/owner/repo/commit/abc123'
         )
-        expect(result.duration_seconds).toBe(expectedDuration)
+        expect(result.duration_ms).toBe(expectedDuration)
         expect(result.stats).toEqual(expectedStats)
         expect(result.checksuites).toEqual(checkSuites)
 
@@ -129,7 +129,7 @@ describe('AnalysisService', () => {
       const result = await service.analyzeCommit(mockCommit, 'owner', 'repo')
 
       expect(result.error).toBe('GitHub API rate limit exceeded')
-      expect(result.duration_seconds).toBe(0)
+      expect(result.duration_ms).toBe(0)
       expect(result.checksuites).toEqual([])
       expect(result.stats).toEqual({
         total: 0,
@@ -261,7 +261,7 @@ describe('AnalysisService', () => {
 
       expect(result.commits).toHaveLength(1)
       expect(result.commits[0].commit.sha).toBe('commit1')
-      expect(result.commits[0].duration_seconds).toBe(240) // 4 minutes
+      expect(result.commits[0].duration_ms).toBe(240000) // 4 minutes in milliseconds
 
       expect(result.summary).toEqual({
         total_commits: 1,

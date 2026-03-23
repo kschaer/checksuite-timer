@@ -78,7 +78,7 @@ jobs:
           echo "**Summary:**"
           echo "- Commits Analyzed: ${{ steps.analysis.outputs.commit_count }}"
           echo "- Total Checksuites: ${{ steps.analysis.outputs.total_checksuites }}"
-          echo "- Average Duration: ${{ steps.analysis.outputs.avg_duration_seconds }} seconds"
+          echo "- Average Duration: ${{ steps.analysis.outputs.avg_duration_ms }}ms"
           
       - name: Detailed Analysis
         run: |
@@ -89,7 +89,7 @@ jobs:
               "### Commit: \(.commit.sha[0:7])
               - **Author**: \(.commit.committer_email)  
               - **Timestamp**: \(.commit.timestamp)
-              - **Duration**: \(.duration_seconds) seconds (\(.duration_seconds / 60 | floor) min \(.duration_seconds % 60) sec)
+              - **Duration**: \(.duration_ms)ms (\(.duration_ms / 1000 / 60 | floor) min \(.duration_ms / 1000 % 60 | floor) sec)
               - **Checksuites**: \(.stats.total) total (\(.stats.successful) successful, \(.stats.failed) failed, \(.stats.cancelled) cancelled)
               - **URL**: \(.commit.url)
               "
@@ -153,9 +153,9 @@ jobs:
           echo ""
           echo "| Time Window | Commits | Avg Duration | Total Checksuites |"
           echo "|-------------|---------|--------------|-------------------|"
-          echo "| 1 hour      | ${{ steps.analysis-1h.outputs.commit_count }} | ${{ steps.analysis-1h.outputs.avg_duration_seconds }}s | ${{ steps.analysis-1h.outputs.total_checksuites }} |"
-          echo "| 24 hours    | ${{ steps.analysis-24h.outputs.commit_count }} | ${{ steps.analysis-24h.outputs.avg_duration_seconds }}s | ${{ steps.analysis-24h.outputs.total_checksuites }} |"
-          echo "| 7 days      | ${{ steps.analysis-7d.outputs.commit_count }} | ${{ steps.analysis-7d.outputs.avg_duration_seconds }}s | ${{ steps.analysis-7d.outputs.total_checksuites }} |"
+          echo "| 1 hour      | ${{ steps.analysis-1h.outputs.commit_count }} | ${{ steps.analysis-1h.outputs.avg_duration_ms }}ms | ${{ steps.analysis-1h.outputs.total_checksuites }} |"
+          echo "| 24 hours    | ${{ steps.analysis-24h.outputs.commit_count }} | ${{ steps.analysis-24h.outputs.avg_duration_ms }}ms | ${{ steps.analysis-24h.outputs.total_checksuites }} |"
+          echo "| 7 days      | ${{ steps.analysis-7d.outputs.commit_count }} | ${{ steps.analysis-7d.outputs.avg_duration_ms }}ms | ${{ steps.analysis-7d.outputs.total_checksuites }} |"
 
   performance-test:
     if: ${{ inputs.test_scenario == 'performance-test' }}
@@ -235,13 +235,13 @@ jobs:
           echo "**Summary:**"
           echo "- Commits Analyzed: ${{ steps.analysis.outputs.commit_count }}"
           echo "- Total Checksuites: ${{ steps.analysis.outputs.total_checksuites }}"
-          echo "- Average Duration: ${{ steps.analysis.outputs.avg_duration_seconds }} seconds"
+          echo "- Average Duration: ${{ steps.analysis.outputs.avg_duration_ms }}ms"
           echo ""
           echo "✅ Check your Cortex.io dashboard to verify deploy events were created/updated!"
           echo ""
           echo "**Expected in Cortex:**"
           echo "- Deploy events for each commit in the time window"
-          echo "- Each deploy should include duration_seconds in customData"
+          echo "- Each deploy should include duration_ms in customData"
           echo "- Re-running this workflow should UPDATE existing deploys (idempotency)"
 
       - name: Display Deploy Data Sample
@@ -254,13 +254,13 @@ jobs:
             .commits[0] |
             "**Commit**: \(.commit.sha[0:7])
             **Timestamp**: \(.commit.timestamp)
-            **Duration**: \(.duration_seconds) seconds
+            **Duration**: \(.duration_ms)ms
             **Deployer Email**: \(.commit.committer_email)
             **Checksuites**: \(.stats.total) total (\(.stats.successful) ✓, \(.stats.failed) ✗)
 
             This data was posted to Cortex with:
             - environment: ${{ inputs.cortex_environment }}
-            - customData.duration_seconds: \(.duration_seconds)
+            - customData.duration_ms: \(.duration_ms)
             - customData.checksuite_stats: \(.stats)
             "
           '

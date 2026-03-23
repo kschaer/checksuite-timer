@@ -57,13 +57,13 @@ jobs:
         run: |
           echo "🔍 Analysis Results:"
           echo "├─ Commits analyzed: ${{ steps.test-action.outputs.commit_count }}"
-          echo "├─ Average duration: ${{ steps.test-action.outputs.avg_duration_seconds }} seconds"
+          echo "├─ Average duration: ${{ steps.test-action.outputs.avg_duration_ms }} seconds"
           echo "└─ Total checksuites: ${{ steps.test-action.outputs.total_checksuites }}"
           
       - name: Display detailed commit analysis
         run: |
           echo "📊 Per-Commit Analysis:"
-          echo '${{ steps.test-action.outputs.commits_data }}' | jq -r '.commits[] | "├─ Commit \(.commit.sha[0:7]) by \(.commit.committer_email): \(.duration_seconds)s duration, \(.stats.total) checksuites (\(.stats.successful) successful, \(.stats.failed) failed)"'
+          echo '${{ steps.test-action.outputs.commits_data }}' | jq -r '.commits[] | "├─ Commit \(.commit.sha[0:7]) by \(.commit.committer_email): \(.duration_ms)s duration, \(.stats.total) checksuites (\(.stats.successful) successful, \(.stats.failed) failed)"'
           
           echo ""
           echo "📈 Summary:"

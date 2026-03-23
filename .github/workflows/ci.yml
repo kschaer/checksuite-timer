@@ -139,4 +139,4 @@ jobs:
           echo "🧪 Integration test results:"
           echo "├─ Commits: ${{ steps.test-action.outputs.commit_count }}"
           echo "├─ Checksuites: ${{ steps.test-action.outputs.total_checksuites }}"
-          echo "└─ Average duration: ${{ steps.test-action.outputs.avg_duration_seconds }}s"
+          echo "└─ Average duration: ${{ steps.test-action.outputs.avg_duration_ms }}ms"

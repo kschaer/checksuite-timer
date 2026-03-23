@@ -56,7 +56,7 @@ export function setActionOutputs(result: AnalysisResult): void {
     result.commits.length > 0
       ? Math.round(
           result.commits.reduce(
-            (sum, analysis) => sum + analysis.duration_seconds,
+            (sum, analysis) => sum + analysis.duration_ms,
             0
           ) / result.commits.length
         )
@@ -64,7 +64,7 @@ export function setActionOutputs(result: AnalysisResult): void {
 
   core.setOutput('commit_count', result.commits.length.toString())
   core.setOutput('total_checksuites', totalChecksuites.toString())
-  core.setOutput('avg_duration_seconds', avgDuration.toString())
+  core.setOutput('avg_duration_ms', avgDuration.toString())
 }
 
 // Log analysis results - testable by mocking core.info/warning
@@ -81,7 +81,7 @@ export function logAnalysisResults(result: AnalysisResult): void {
       )
     } else {
       core.info(
-        `Commit ${analysis.commit.sha}: ${analysis.duration_seconds}s duration, ${analysis.stats.total} checksuites (${analysis.stats.successful} successful, ${analysis.stats.failed} failed)`
+        `Commit ${analysis.commit.sha}: ${analysis.duration_ms}ms duration, ${analysis.stats.total} checksuites (${analysis.stats.successful} successful, ${analysis.stats.failed} failed)`
       )
     }
   }

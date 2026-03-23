@@ -41,8 +41,8 @@ outputs:
     description: 'Number of commits analyzed'
   total_checksuites:
     description: 'Total number of checksuites across all commits'
-  avg_duration_seconds:
-    description: 'Average duration across all commits in seconds'
+  avg_duration_ms:
+    description: 'Average duration across all commits in milliseconds'
 
 runs:
   using: 'node20'

@@ -148,7 +148,7 @@ describe('Integration Tests', () => {
       expect(mockCore.setOutput).toHaveBeenCalledWith('commit_count', '2')
       expect(mockCore.setOutput).toHaveBeenCalledWith('total_checksuites', '3')
       expect(mockCore.setOutput).toHaveBeenCalledWith(
-        'avg_duration_seconds',
+        'avg_duration_ms',
         expect.any(String)
       )
 
@@ -165,7 +165,7 @@ describe('Integration Tests', () => {
 
       // Verify first commit analysis
       expect(result.commits[0].commit.sha).toBe('commit1')
-      expect(result.commits[0].duration_seconds).toBe(420) // 7 minutes (10:01 to 10:08)
+      expect(result.commits[0].duration_ms).toBe(420000) // 7 minutes (10:01 to 10:08) in milliseconds
       expect(result.commits[0].stats).toEqual({
         total: 2,
         successful: 1,
@@ -176,7 +176,7 @@ describe('Integration Tests', () => {
 
       // Verify second commit analysis
       expect(result.commits[1].commit.sha).toBe('commit2')
-      expect(result.commits[1].duration_seconds).toBe(120) // 2 minutes (11:01 to 11:03)
+      expect(result.commits[1].duration_ms).toBe(120000) // 2 minutes (11:01 to 11:03) in milliseconds
       expect(result.commits[1].stats).toEqual({
         total: 1,
         successful: 1,

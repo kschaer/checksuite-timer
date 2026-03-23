@@ -132,7 +132,7 @@ describe('CortexApiClient', () => {
         sha: 'abc123',
         url: 'https://github.com/owner/repo/commit/abc123',
         customData: {
-          duration_seconds: 270,
+          duration_ms: 270,
           checksuite_stats: { total: 3, successful: 2, failed: 1 }
         }
       }
