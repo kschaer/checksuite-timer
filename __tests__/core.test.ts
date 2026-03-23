@@ -345,7 +345,9 @@ describe('createCortexDeployPayload', () => {
     expect(payload.deployer?.name).toBe('john.doe')
     expect(payload.environment).toBe('production')
     expect(payload.sha).toBe('abc123def456789012345678901234567890abcd')
-    expect(payload.url).toBe('https://github.com/owner/repo/commit/abc123def456')
+    expect(payload.url).toBe(
+      'https://github.com/owner/repo/commit/abc123def456'
+    )
     expect(payload.customData?.duration_seconds).toBe(270)
     expect(payload.customData?.checksuite_stats).toEqual(analysis.stats)
     expect(payload.customData?.total_checksuites).toBe(3)
@@ -374,7 +376,11 @@ describe('createCortexDeployPayload', () => {
       postPerCommit: true
     }
 
-    const payload = createCortexDeployPayload(analysis as any, config, 'develop')
+    const payload = createCortexDeployPayload(
+      analysis as any,
+      config,
+      'develop'
+    )
 
     expect(payload.title).toBe('user@company.com deployed xyz789')
   })

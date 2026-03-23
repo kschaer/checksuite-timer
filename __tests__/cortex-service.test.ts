@@ -35,7 +35,11 @@ describe('CortexService', () => {
       mockClient.getDeploys
         .mockResolvedValueOnce({
           deploys: [
-            { uuid: 'deploy-1', sha: 'abc123', environment: 'production' } as CortexDeploy
+            {
+              uuid: 'deploy-1',
+              sha: 'abc123',
+              environment: 'production'
+            } as CortexDeploy
           ],
           page: 0,
           totalPages: 2,
@@ -43,7 +47,11 @@ describe('CortexService', () => {
         })
         .mockResolvedValueOnce({
           deploys: [
-            { uuid: 'deploy-2', sha: 'def456', environment: 'production' } as CortexDeploy
+            {
+              uuid: 'deploy-2',
+              sha: 'def456',
+              environment: 'production'
+            } as CortexDeploy
           ],
           page: 1,
           totalPages: 2,
@@ -63,7 +71,11 @@ describe('CortexService', () => {
     test('caches deploys for subsequent calls', async () => {
       mockClient.getDeploys.mockResolvedValue({
         deploys: [
-          { uuid: 'deploy-1', sha: 'abc123', environment: 'production' } as CortexDeploy
+          {
+            uuid: 'deploy-1',
+            sha: 'abc123',
+            environment: 'production'
+          } as CortexDeploy
         ],
         page: 0,
         totalPages: 1,
@@ -80,7 +92,11 @@ describe('CortexService', () => {
     test('handles single page response', async () => {
       mockClient.getDeploys.mockResolvedValue({
         deploys: [
-          { uuid: 'deploy-1', sha: 'abc123', environment: 'production' } as CortexDeploy
+          {
+            uuid: 'deploy-1',
+            sha: 'abc123',
+            environment: 'production'
+          } as CortexDeploy
         ],
         page: 0,
         totalPages: 1,
@@ -124,9 +140,21 @@ describe('CortexService', () => {
   describe('findExistingDeploy', () => {
     test('finds deploy by sha and environment', () => {
       const deploys = [
-        { uuid: 'deploy-1', sha: 'abc123', environment: 'production' } as CortexDeploy,
-        { uuid: 'deploy-2', sha: 'def456', environment: 'staging' } as CortexDeploy,
-        { uuid: 'deploy-3', sha: 'abc123', environment: 'staging' } as CortexDeploy
+        {
+          uuid: 'deploy-1',
+          sha: 'abc123',
+          environment: 'production'
+        } as CortexDeploy,
+        {
+          uuid: 'deploy-2',
+          sha: 'def456',
+          environment: 'staging'
+        } as CortexDeploy,
+        {
+          uuid: 'deploy-3',
+          sha: 'abc123',
+          environment: 'staging'
+        } as CortexDeploy
       ]
 
       const result = service.findExistingDeploy('abc123', 'production', deploys)
@@ -136,7 +164,11 @@ describe('CortexService', () => {
 
     test('returns null when no match found', () => {
       const deploys = [
-        { uuid: 'deploy-1', sha: 'abc123', environment: 'production' } as CortexDeploy
+        {
+          uuid: 'deploy-1',
+          sha: 'abc123',
+          environment: 'production'
+        } as CortexDeploy
       ]
 
       const result = service.findExistingDeploy('xyz789', 'production', deploys)
@@ -146,12 +178,28 @@ describe('CortexService', () => {
 
     test('distinguishes between environments', () => {
       const deploys = [
-        { uuid: 'deploy-1', sha: 'abc123', environment: 'production' } as CortexDeploy,
-        { uuid: 'deploy-2', sha: 'abc123', environment: 'staging' } as CortexDeploy
+        {
+          uuid: 'deploy-1',
+          sha: 'abc123',
+          environment: 'production'
+        } as CortexDeploy,
+        {
+          uuid: 'deploy-2',
+          sha: 'abc123',
+          environment: 'staging'
+        } as CortexDeploy
       ]
 
-      const resultProd = service.findExistingDeploy('abc123', 'production', deploys)
-      const resultStaging = service.findExistingDeploy('abc123', 'staging', deploys)
+      const resultProd = service.findExistingDeploy(
+        'abc123',
+        'production',
+        deploys
+      )
+      const resultStaging = service.findExistingDeploy(
+        'abc123',
+        'staging',
+        deploys
+      )
 
       expect(resultProd).toBe('deploy-1')
       expect(resultStaging).toBe('deploy-2')
@@ -197,7 +245,11 @@ describe('CortexService', () => {
 
     test('updates existing deploy when found', async () => {
       const existingDeploys = [
-        { uuid: 'existing-uuid', sha: 'abc123', environment: 'production' } as CortexDeploy
+        {
+          uuid: 'existing-uuid',
+          sha: 'abc123',
+          environment: 'production'
+        } as CortexDeploy
       ]
       mockClient.updateDeploy.mockResolvedValue({ id: 'deploy-123' })
 
@@ -232,7 +284,11 @@ describe('CortexService', () => {
 
     test('handles update error gracefully', async () => {
       const existingDeploys = [
-        { uuid: 'existing-uuid', sha: 'abc123', environment: 'production' } as CortexDeploy
+        {
+          uuid: 'existing-uuid',
+          sha: 'abc123',
+          environment: 'production'
+        } as CortexDeploy
       ]
       mockClient.updateDeploy.mockRejectedValue(new Error('Network Error'))
 
@@ -326,7 +382,11 @@ describe('CortexService', () => {
     test('updates existing deploys idempotently', async () => {
       mockClient.getDeploys.mockResolvedValue({
         deploys: [
-          { uuid: 'existing-1', sha: 'abc123', environment: 'production' } as CortexDeploy
+          {
+            uuid: 'existing-1',
+            sha: 'abc123',
+            environment: 'production'
+          } as CortexDeploy
         ],
         page: 0,
         totalPages: 1,
