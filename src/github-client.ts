@@ -1,5 +1,5 @@
 import * as github from '@actions/github'
-import { Commit, CheckSuite } from './core'
+import { Commit, CheckSuite, CheckRun } from './core'
 
 // Interface for GitHub API operations - easily mockable for testing
 export interface GitHubClient {
@@ -14,6 +14,11 @@ export interface GitHubClient {
     repo: string,
     sha: string
   ): Promise<CheckSuite[]>
+  getCheckRuns(
+    owner: string,
+    repo: string,
+    checkSuiteId: number
+  ): Promise<CheckRun[]>
 }
 
 // Real implementation using GitHub API
@@ -73,6 +78,20 @@ export class GitHubApiClient implements GitHubClient {
     })
 
     return response.data.check_suites as CheckSuite[]
+  }
+
+  async getCheckRuns(
+    owner: string,
+    repo: string,
+    checkSuiteId: number
+  ): Promise<CheckRun[]> {
+    const response = await this.octokit.rest.checks.listForSuite({
+      owner,
+      repo,
+      check_suite_id: checkSuiteId
+    })
+
+    return response.data.check_runs as CheckRun[]
   }
 }
 

@@ -9,7 +9,7 @@ import {
 
 export interface DeployResult {
   success: boolean
-  id?: string
+  uuid?: string
   error?: string
   action: 'created' | 'updated' | 'failed'
 }
@@ -117,12 +117,12 @@ export class CortexService {
         )
 
         core.info(
-          `Updated deploy in Cortex for commit ${analysis.commit.sha} (Cortex ID: ${response.id})`
+          `Updated deploy in Cortex for commit ${analysis.commit.sha} (Cortex UUID: ${response.uuid})`
         )
 
         return {
           success: true,
-          id: response.id,
+          uuid: response.uuid,
           action: 'updated'
         }
       } else {
@@ -137,12 +137,12 @@ export class CortexService {
         )
 
         core.info(
-          `Created deploy in Cortex for commit ${analysis.commit.sha} (Cortex ID: ${response.id})`
+          `Created deploy in Cortex for commit ${analysis.commit.sha} (Cortex UUID: ${response.uuid})`
         )
 
         return {
           success: true,
-          id: response.id,
+          uuid: response.uuid,
           action: 'created'
         }
       }

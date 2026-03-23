@@ -5,7 +5,8 @@ import { Commit, CheckSuite } from '../src/core'
 // Mock GitHub client for testing
 const createMockGitHubClient = (): jest.Mocked<GitHubClient> => ({
   getCommits: jest.fn(),
-  getCheckSuites: jest.fn()
+  getCheckSuites: jest.fn(),
+  getCheckRuns: jest.fn()
 })
 
 describe('AnalysisService', () => {
@@ -29,115 +30,147 @@ describe('AnalysisService', () => {
       }
     }
 
-    const testCases = [
-      {
-        name: 'successful commit with checksuites',
-        checkSuites: [
-          {
-            id: 1,
-            status: 'completed',
-            conclusion: 'success',
-            created_at: '2024-01-01T10:01:00Z',
-            updated_at: '2024-01-01T10:05:00Z',
-            head_sha: 'abc123'
-          }
-        ] as CheckSuite[],
-        expectedDuration: 240000, // 4 minutes in milliseconds
-        expectedStats: {
-          total: 1,
-          successful: 1,
-          failed: 0,
-          cancelled: 0,
-          skipped: 0,
-          other: 0,
-          longest_checksuite: {
-            duration_ms: 240000,
-            name: 'Unknown',
-            status: 'completed'
-          }
-        },
-        expectError: false
-      },
-      {
-        name: 'commit with no checksuites',
-        checkSuites: [] as CheckSuite[],
-        expectedDuration: 0,
-        expectedStats: {
-          total: 0,
-          successful: 0,
-          failed: 0,
-          cancelled: 0,
-          skipped: 0,
-          other: 0
-        },
-        expectError: false
-      },
-      {
-        name: 'commit with mixed checksuite results',
-        checkSuites: [
-          {
-            id: 1,
-            status: 'completed',
-            conclusion: 'success',
-            created_at: '2024-01-01T10:00:00Z',
-            updated_at: '2024-01-01T10:03:00Z',
-            app: { name: 'Tests' }
-          },
-          {
-            id: 2,
-            status: 'completed',
-            conclusion: 'failure',
-            created_at: '2024-01-01T10:01:00Z',
-            updated_at: '2024-01-01T10:08:00Z',
-            app: { name: 'Build' }
-          }
-        ] as CheckSuite[],
-        expectedDuration: 480000, // 8 minutes (10:00 to 10:08) in milliseconds
-        expectedStats: {
-          total: 2,
-          successful: 1,
-          failed: 1,
-          cancelled: 0,
-          skipped: 0,
-          other: 0,
-          longest_checksuite: {
-            duration_ms: 420000, // 7 minutes (10:01 to 10:08)
-            name: 'Build',
-            status: 'completed'
-          }
-        },
-        expectError: false
-      }
-    ]
-
-    test.each(testCases)(
-      '$name',
-      async ({ checkSuites, expectedDuration, expectedStats, expectError }) => {
-        mockClient.getCheckSuites.mockResolvedValue(checkSuites)
-
-        const result = await service.analyzeCommit(mockCommit, 'owner', 'repo')
-
-        expect(mockClient.getCheckSuites).toHaveBeenCalledWith(
-          'owner',
-          'repo',
-          'abc123'
-        )
-        expect(result.commit.sha).toBe('abc123')
-        expect(result.commit.committer_email).toBe('user@example.com')
-        expect(result.commit.url).toBe(
-          'https://github.com/owner/repo/commit/abc123'
-        )
-        expect(result.duration_ms).toBe(expectedDuration)
-        expect(result.stats).toEqual(expectedStats)
-        expect(result.checksuites).toEqual(checkSuites)
-
-        if (expectError) {
-          expect(result.error).toBeDefined()
-        } else {
-          expect(result.error).toBeUndefined()
+    test('successful commit with checksuites and check runs', async () => {
+      const checkSuites = [
+        {
+          id: 1,
+          status: 'completed',
+          conclusion: 'success',
+          created_at: '2024-01-01T10:01:00Z',
+          updated_at: '2024-01-01T10:05:00Z',
+          head_sha: 'abc123'
         }
-      }
-    )
+      ] as CheckSuite[]
+
+      const checkRuns = [
+        {
+          id: 101,
+          name: 'CI Tests',
+          status: 'completed',
+          conclusion: 'success',
+          started_at: '2024-01-01T10:01:00Z',
+          completed_at: '2024-01-01T10:05:00Z',
+          head_sha: 'abc123'
+        }
+      ]
+
+      mockClient.getCheckSuites.mockResolvedValue(checkSuites)
+      mockClient.getCheckRuns.mockResolvedValue(checkRuns)
+
+      const result = await service.analyzeCommit(mockCommit, 'owner', 'repo')
+
+      expect(mockClient.getCheckSuites).toHaveBeenCalledWith(
+        'owner',
+        'repo',
+        'abc123'
+      )
+      expect(mockClient.getCheckRuns).toHaveBeenCalledWith('owner', 'repo', 1)
+      expect(result.duration_ms).toBe(240000) // 4 minutes
+      expect(result.stats).toEqual({
+        total: 1,
+        successful: 1,
+        failed: 0,
+        cancelled: 0,
+        skipped: 0,
+        other: 0,
+        longest_checksuite: {
+          duration_ms: 240000,
+          name: 'CI Tests',
+          status: 'completed'
+        }
+      })
+      expect(result.error).toBeUndefined()
+    })
+
+    test('commit with no checksuites', async () => {
+      mockClient.getCheckSuites.mockResolvedValue([])
+
+      const result = await service.analyzeCommit(mockCommit, 'owner', 'repo')
+
+      expect(result.duration_ms).toBe(0)
+      expect(result.stats).toEqual({
+        total: 0,
+        successful: 0,
+        failed: 0,
+        cancelled: 0,
+        skipped: 0,
+        other: 0
+      })
+      expect(result.error).toBeUndefined()
+    })
+
+    test('commit with mixed checksuite results and check runs', async () => {
+      const checkSuites = [
+        {
+          id: 1,
+          status: 'completed',
+          conclusion: 'success',
+          created_at: '2024-01-01T10:00:00Z',
+          updated_at: '2024-01-01T10:03:00Z',
+          head_sha: 'abc123',
+          head_branch: 'main',
+          app: { name: 'GitHub Actions' }
+        },
+        {
+          id: 2,
+          status: 'completed',
+          conclusion: 'failure',
+          created_at: '2024-01-01T10:01:00Z',
+          updated_at: '2024-01-01T10:08:00Z',
+          head_sha: 'abc123',
+          head_branch: 'main',
+          app: { name: 'GitHub Actions' }
+        }
+      ] as CheckSuite[]
+
+      const checkRuns1 = [
+        {
+          id: 101,
+          name: 'Tests',
+          status: 'completed',
+          conclusion: 'success',
+          started_at: '2024-01-01T10:00:00Z',
+          completed_at: '2024-01-01T10:03:00Z',
+          head_sha: 'abc123'
+        }
+      ]
+
+      const checkRuns2 = [
+        {
+          id: 102,
+          name: 'Build',
+          status: 'completed',
+          conclusion: 'failure',
+          started_at: '2024-01-01T10:01:00Z',
+          completed_at: '2024-01-01T10:08:00Z',
+          head_sha: 'abc123'
+        }
+      ]
+
+      mockClient.getCheckSuites.mockResolvedValue(checkSuites)
+      mockClient.getCheckRuns
+        .mockResolvedValueOnce(checkRuns1)
+        .mockResolvedValueOnce(checkRuns2)
+
+      const result = await service.analyzeCommit(mockCommit, 'owner', 'repo')
+
+      expect(mockClient.getCheckRuns).toHaveBeenCalledTimes(2)
+      expect(result.duration_ms).toBe(480000) // 8 minutes (10:00 to 10:08)
+      expect(result.stats).toEqual({
+        total: 2,
+        successful: 1,
+        failed: 1,
+        cancelled: 0,
+        skipped: 0,
+        other: 0,
+        longest_checksuite: {
+          duration_ms: 420000, // 7 minutes (10:01 to 10:08)
+          name: 'Build',
+          status: 'completed'
+        }
+      })
+      expect(result.error).toBeUndefined()
+    })
 
     test('handles API errors gracefully', async () => {
       const apiError = new Error('GitHub API rate limit exceeded')
@@ -207,6 +240,7 @@ describe('AnalysisService', () => {
           } as CheckSuite
         ])
         .mockRejectedValueOnce(new Error('API Error'))
+      mockClient.getCheckRuns.mockResolvedValue([])
 
       const results = await service.analyzeCommits(commits, 'owner', 'repo')
 
@@ -256,6 +290,7 @@ describe('AnalysisService', () => {
 
       mockClient.getCommits.mockResolvedValue(mockCommits)
       mockClient.getCheckSuites.mockResolvedValue(mockCheckSuites)
+      mockClient.getCheckRuns.mockResolvedValue([])
 
       const since = new Date('2024-01-01T00:00:00Z')
       const result = await service.analyzeRepository(

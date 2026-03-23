@@ -1,5 +1,15 @@
 // Pure functions with no side effects - easily testable
 
+export interface CheckRun {
+  id: number
+  name: string
+  status: string
+  conclusion: string | null
+  started_at: string | null
+  completed_at: string | null
+  head_sha: string
+}
+
 export interface CheckSuite {
   id: number
   status: string
@@ -9,7 +19,11 @@ export interface CheckSuite {
   head_sha: string
   app?: {
     name: string
+    slug?: string
   }
+  head_branch?: string
+  url?: string
+  check_runs?: CheckRun[]
 }
 
 export interface Commit {
@@ -103,7 +117,8 @@ export function calculateCheckSuiteStats(
   }
 
   let longestDuration = 0
-  let longestSuite: CheckSuite | null = null
+  let longestName = ''
+  let longestStatus = ''
 
   for (const suite of checkSuites) {
     // Track conclusion counts
@@ -127,23 +142,45 @@ export function calculateCheckSuiteStats(
         break
     }
 
-    // Track longest running checksuite
-    const createdAt = new Date(suite.created_at).getTime()
-    const updatedAt = new Date(suite.updated_at).getTime()
-    const duration = updatedAt - createdAt
+    // Check for longest running check run within this suite
+    if (suite.check_runs && suite.check_runs.length > 0) {
+      for (const run of suite.check_runs) {
+        if (run.started_at && run.completed_at) {
+          const startedAt = new Date(run.started_at).getTime()
+          const completedAt = new Date(run.completed_at).getTime()
+          const duration = completedAt - startedAt
 
-    if (duration > longestDuration) {
-      longestDuration = duration
-      longestSuite = suite
+          if (duration > longestDuration) {
+            longestDuration = duration
+            longestName = run.name
+            longestStatus = run.status
+          }
+        }
+      }
+    }
+
+    // Fallback: track longest running checksuite if no check runs
+    if (longestDuration === 0) {
+      const createdAt = new Date(suite.created_at).getTime()
+      const updatedAt = new Date(suite.updated_at).getTime()
+      const duration = updatedAt - createdAt
+
+      if (duration > longestDuration) {
+        longestDuration = duration
+        longestName = suite.head_branch
+          ? `${suite.head_branch} #${suite.id}`
+          : `Check Suite #${suite.id}`
+        longestStatus = suite.status
+      }
     }
   }
 
   // Add longest checksuite info if we found one
-  if (longestSuite) {
+  if (longestDuration > 0) {
     stats.longest_checksuite = {
       duration_ms: longestDuration,
-      name: longestSuite.app?.name || 'Unknown',
-      status: longestSuite.status
+      name: longestName,
+      status: longestStatus
     }
   }
 
@@ -232,7 +269,12 @@ export interface CortexDeployPayload {
 }
 
 export interface CortexDeployResponse {
-  id: string
+  uuid: string // Primary deploy identifier (UUID format)
+  id: number // Internal database ID
+  serviceId?: number
+  timestamp?: string
+  title?: string
+  type?: string
 }
 
 export interface CortexConfig {

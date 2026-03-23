@@ -44,7 +44,8 @@ describe('Integration Tests', () => {
           listCommits: jest.fn()
         },
         checks: {
-          listSuitesForRef: jest.fn()
+          listSuitesForRef: jest.fn(),
+          listForSuite: jest.fn()
         }
       }
     }
@@ -87,7 +88,8 @@ describe('Integration Tests', () => {
           created_at: '2024-01-01T10:01:00Z',
           updated_at: '2024-01-01T10:05:00Z',
           head_sha: 'commit1',
-          app: { name: 'CI Tests' }
+          head_branch: 'main',
+          app: { name: 'GitHub Actions' }
         },
         {
           id: 2,
@@ -96,7 +98,8 @@ describe('Integration Tests', () => {
           created_at: '2024-01-01T10:02:00Z',
           updated_at: '2024-01-01T10:08:00Z',
           head_sha: 'commit1',
-          app: { name: 'Build' }
+          head_branch: 'main',
+          app: { name: 'GitHub Actions' }
         }
       ]
 
@@ -108,7 +111,8 @@ describe('Integration Tests', () => {
           created_at: '2024-01-01T11:01:00Z',
           updated_at: '2024-01-01T11:03:00Z',
           head_sha: 'commit2',
-          app: { name: 'Deploy' }
+          head_branch: 'main',
+          app: { name: 'GitHub Actions' }
         }
       ]
 
@@ -118,6 +122,54 @@ describe('Integration Tests', () => {
       mockOctokit.rest.checks.listSuitesForRef
         .mockResolvedValueOnce({ data: { check_suites: mockCheckSuites1 } })
         .mockResolvedValueOnce({ data: { check_suites: mockCheckSuites2 } })
+
+      // Mock check runs for each suite
+      mockOctokit.rest.checks.listForSuite
+        .mockResolvedValueOnce({
+          data: {
+            check_runs: [
+              {
+                id: 101,
+                name: 'CI Tests',
+                status: 'completed',
+                conclusion: 'success',
+                started_at: '2024-01-01T10:01:00Z',
+                completed_at: '2024-01-01T10:05:00Z',
+                head_sha: 'commit1'
+              }
+            ]
+          }
+        })
+        .mockResolvedValueOnce({
+          data: {
+            check_runs: [
+              {
+                id: 102,
+                name: 'Build',
+                status: 'completed',
+                conclusion: 'failure',
+                started_at: '2024-01-01T10:02:00Z',
+                completed_at: '2024-01-01T10:08:00Z',
+                head_sha: 'commit1'
+              }
+            ]
+          }
+        })
+        .mockResolvedValueOnce({
+          data: {
+            check_runs: [
+              {
+                id: 103,
+                name: 'Deploy',
+                status: 'completed',
+                conclusion: 'success',
+                started_at: '2024-01-01T11:01:00Z',
+                completed_at: '2024-01-01T11:03:00Z',
+                head_sha: 'commit2'
+              }
+            ]
+          }
+        })
 
       await run()
 
@@ -321,6 +373,23 @@ describe('Integration Tests', () => {
           }
         })
         .mockRejectedValueOnce(new Error('Checksuite API error'))
+
+      // Mock check runs for the successful commit
+      mockOctokit.rest.checks.listForSuite.mockResolvedValue({
+        data: {
+          check_runs: [
+            {
+              id: 101,
+              name: 'Tests',
+              status: 'completed',
+              conclusion: 'success',
+              started_at: '2024-01-01T10:01:00Z',
+              completed_at: '2024-01-01T10:05:00Z',
+              head_sha: 'commit1'
+            }
+          ]
+        }
+      })
 
       await run()
 

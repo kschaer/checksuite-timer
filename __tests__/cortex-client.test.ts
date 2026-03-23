@@ -123,7 +123,7 @@ describe('CortexApiClient', () => {
 
   describe('createDeploy', () => {
     test('successfully creates deploy', async () => {
-      const mockResponse = { id: 'deploy-uuid-123' }
+      const mockResponse = { uuid: 'deploy-uuid-123', id: 123 }
       mockFetch.mockResolvedValue({
         ok: true,
         json: async () => mockResponse
@@ -138,7 +138,7 @@ describe('CortexApiClient', () => {
 
       const result = await client.createDeploy('my-service', payload)
 
-      expect(result.id).toBe('deploy-uuid-123')
+      expect(result.uuid).toBe('deploy-uuid-123')
       expect(mockFetch).toHaveBeenCalledWith(
         'https://api.getcortexapp.com/api/v1/catalog/my-service/deploys',
         expect.objectContaining({
@@ -153,7 +153,7 @@ describe('CortexApiClient', () => {
     })
 
     test('includes all optional fields in payload', async () => {
-      const mockResponse = { id: 'deploy-123' }
+      const mockResponse = { uuid: 'deploy-123', id: 456 }
       mockFetch.mockResolvedValue({
         ok: true,
         json: async () => mockResponse
@@ -189,7 +189,7 @@ describe('CortexApiClient', () => {
 
   describe('updateDeploy', () => {
     test('successfully updates deploy', async () => {
-      const mockResponse = { id: 'deploy-uuid-123' }
+      const mockResponse = { uuid: 'deploy-uuid-123', id: 123 }
       mockFetch.mockResolvedValue({
         ok: true,
         json: async () => mockResponse
@@ -208,7 +208,7 @@ describe('CortexApiClient', () => {
         payload
       )
 
-      expect(result.id).toBe('deploy-uuid-123')
+      expect(result.uuid).toBe('deploy-uuid-123')
       expect(mockFetch).toHaveBeenCalledWith(
         'https://api.getcortexapp.com/api/v1/catalog/my-service/deploys/existing-uuid',
         expect.objectContaining({

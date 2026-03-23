@@ -114,18 +114,46 @@ describe('calculateCheckSuiteStats', () => {
       name: 'all successful',
       checkSuites: [
         {
+          id: 100,
           conclusion: 'success',
           created_at: '2024-01-01T10:00:00Z',
           updated_at: '2024-01-01T10:02:00Z',
           status: 'completed',
-          app: { name: 'CI Tests' }
+          head_sha: 'abc123',
+          head_branch: 'main',
+          app: { name: 'GitHub Actions' },
+          check_runs: [
+            {
+              id: 1001,
+              name: 'CI Tests',
+              status: 'completed',
+              conclusion: 'success',
+              started_at: '2024-01-01T10:00:00Z',
+              completed_at: '2024-01-01T10:02:00Z',
+              head_sha: 'abc123'
+            }
+          ]
         },
         {
+          id: 101,
           conclusion: 'success',
           created_at: '2024-01-01T10:00:00Z',
           updated_at: '2024-01-01T10:05:00Z',
           status: 'completed',
-          app: { name: 'Build' }
+          head_sha: 'abc123',
+          head_branch: 'main',
+          app: { name: 'GitHub Actions' },
+          check_runs: [
+            {
+              id: 1002,
+              name: 'Build',
+              status: 'completed',
+              conclusion: 'success',
+              started_at: '2024-01-01T10:00:00Z',
+              completed_at: '2024-01-01T10:05:00Z',
+              head_sha: 'abc123'
+            }
+          ]
         }
       ],
       expected: {
@@ -146,32 +174,88 @@ describe('calculateCheckSuiteStats', () => {
       name: 'mixed results',
       checkSuites: [
         {
+          id: 200,
           conclusion: 'success',
           created_at: '2024-01-01T10:00:00Z',
           updated_at: '2024-01-01T10:03:00Z',
           status: 'completed',
-          app: { name: 'Tests' }
+          head_sha: 'def456',
+          head_branch: 'feature-a',
+          app: { name: 'GitHub Actions' },
+          check_runs: [
+            {
+              id: 2001,
+              name: 'Tests',
+              status: 'completed',
+              conclusion: 'success',
+              started_at: '2024-01-01T10:00:00Z',
+              completed_at: '2024-01-01T10:03:00Z',
+              head_sha: 'def456'
+            }
+          ]
         },
         {
+          id: 201,
           conclusion: 'failure',
           created_at: '2024-01-01T10:00:00Z',
           updated_at: '2024-01-01T10:10:00Z',
           status: 'completed',
-          app: { name: 'Lint' }
+          head_sha: 'def456',
+          head_branch: 'feature-a',
+          app: { name: 'GitHub Actions' },
+          check_runs: [
+            {
+              id: 2002,
+              name: 'Lint',
+              status: 'completed',
+              conclusion: 'failure',
+              started_at: '2024-01-01T10:00:00Z',
+              completed_at: '2024-01-01T10:10:00Z',
+              head_sha: 'def456'
+            }
+          ]
         },
         {
+          id: 202,
           conclusion: 'cancelled',
           created_at: '2024-01-01T10:00:00Z',
           updated_at: '2024-01-01T10:01:00Z',
           status: 'completed',
-          app: { name: 'Deploy' }
+          head_sha: 'def456',
+          head_branch: 'feature-a',
+          app: { name: 'GitHub Actions' },
+          check_runs: [
+            {
+              id: 2003,
+              name: 'Deploy',
+              status: 'completed',
+              conclusion: 'cancelled',
+              started_at: '2024-01-01T10:00:00Z',
+              completed_at: '2024-01-01T10:01:00Z',
+              head_sha: 'def456'
+            }
+          ]
         },
         {
+          id: 203,
           conclusion: 'neutral',
           created_at: '2024-01-01T10:00:00Z',
           updated_at: '2024-01-01T10:02:00Z',
           status: 'completed',
-          app: { name: 'Security' }
+          head_sha: 'def456',
+          head_branch: 'feature-a',
+          app: { name: 'GitHub Actions' },
+          check_runs: [
+            {
+              id: 2004,
+              name: 'Security',
+              status: 'completed',
+              conclusion: 'neutral',
+              started_at: '2024-01-01T10:00:00Z',
+              completed_at: '2024-01-01T10:02:00Z',
+              head_sha: 'def456'
+            }
+          ]
         }
       ],
       expected: {
@@ -192,25 +276,67 @@ describe('calculateCheckSuiteStats', () => {
       name: 'different failure types',
       checkSuites: [
         {
+          id: 300,
           conclusion: 'failure',
           created_at: '2024-01-01T10:00:00Z',
           updated_at: '2024-01-01T10:04:00Z',
           status: 'completed',
-          app: { name: 'Test 1' }
+          head_sha: 'ghi789',
+          head_branch: 'develop',
+          app: { name: 'GitHub Actions' },
+          check_runs: [
+            {
+              id: 3001,
+              name: 'Test Suite 1',
+              status: 'completed',
+              conclusion: 'failure',
+              started_at: '2024-01-01T10:00:00Z',
+              completed_at: '2024-01-01T10:04:00Z',
+              head_sha: 'ghi789'
+            }
+          ]
         },
         {
+          id: 301,
           conclusion: 'startup_failure',
           created_at: '2024-01-01T10:00:00Z',
           updated_at: '2024-01-01T10:01:00Z',
           status: 'completed',
-          app: { name: 'Test 2' }
+          head_sha: 'ghi789',
+          head_branch: 'develop',
+          app: { name: 'GitHub Actions' },
+          check_runs: [
+            {
+              id: 3002,
+              name: 'Test Suite 2',
+              status: 'completed',
+              conclusion: 'startup_failure',
+              started_at: '2024-01-01T10:00:00Z',
+              completed_at: '2024-01-01T10:01:00Z',
+              head_sha: 'ghi789'
+            }
+          ]
         },
         {
+          id: 302,
           conclusion: 'timed_out',
           created_at: '2024-01-01T10:00:00Z',
           updated_at: '2024-01-01T10:30:00Z',
           status: 'completed',
-          app: { name: 'Test 3' }
+          head_sha: 'ghi789',
+          head_branch: 'develop',
+          app: { name: 'GitHub Actions' },
+          check_runs: [
+            {
+              id: 3003,
+              name: 'E2E Tests',
+              status: 'completed',
+              conclusion: 'timed_out',
+              started_at: '2024-01-01T10:00:00Z',
+              completed_at: '2024-01-01T10:30:00Z',
+              head_sha: 'ghi789'
+            }
+          ]
         }
       ],
       expected: {
@@ -222,7 +348,7 @@ describe('calculateCheckSuiteStats', () => {
         other: 0,
         longest_checksuite: {
           duration_ms: 1800000, // 30 minutes
-          name: 'Test 3',
+          name: 'E2E Tests',
           status: 'completed'
         }
       }
@@ -231,23 +357,65 @@ describe('calculateCheckSuiteStats', () => {
       name: 'null conclusions',
       checkSuites: [
         {
+          id: 400,
           conclusion: null,
           created_at: '2024-01-01T10:00:00Z',
           updated_at: '2024-01-01T10:01:00Z',
-          status: 'queued'
+          status: 'queued',
+          head_sha: 'jkl012',
+          app: { name: 'GitHub Actions' },
+          check_runs: [
+            {
+              id: 4001,
+              name: 'Queued Job',
+              status: 'queued',
+              conclusion: null,
+              started_at: null,
+              completed_at: null,
+              head_sha: 'jkl012'
+            }
+          ]
         },
         {
+          id: 401,
           conclusion: undefined,
           created_at: '2024-01-01T10:00:00Z',
           updated_at: '2024-01-01T10:02:00Z',
-          status: 'in_progress'
+          status: 'in_progress',
+          head_sha: 'jkl012',
+          app: { name: 'GitHub Actions' },
+          check_runs: [
+            {
+              id: 4002,
+              name: 'In Progress Job',
+              status: 'in_progress',
+              conclusion: null,
+              started_at: '2024-01-01T10:00:00Z',
+              completed_at: null,
+              head_sha: 'jkl012'
+            }
+          ]
         },
         {
+          id: 402,
           conclusion: 'skipped',
           created_at: '2024-01-01T10:00:00Z',
           updated_at: '2024-01-01T10:05:00Z',
           status: 'completed',
-          app: { name: 'Skipped Task' }
+          head_sha: 'jkl012',
+          head_branch: 'hotfix',
+          app: { name: 'GitHub Actions' },
+          check_runs: [
+            {
+              id: 4003,
+              name: 'Skipped Job',
+              status: 'completed',
+              conclusion: 'skipped',
+              started_at: '2024-01-01T10:00:00Z',
+              completed_at: '2024-01-01T10:05:00Z',
+              head_sha: 'jkl012'
+            }
+          ]
         }
       ],
       expected: {
@@ -259,7 +427,7 @@ describe('calculateCheckSuiteStats', () => {
         other: 2,
         longest_checksuite: {
           duration_ms: 300000, // 5 minutes
-          name: 'Skipped Task',
+          name: 'Skipped Job',
           status: 'completed'
         }
       }
@@ -268,10 +436,12 @@ describe('calculateCheckSuiteStats', () => {
       name: 'checksuite without app name',
       checkSuites: [
         {
+          id: 999,
           conclusion: 'success',
           created_at: '2024-01-01T10:00:00Z',
           updated_at: '2024-01-01T10:03:00Z',
-          status: 'completed'
+          status: 'completed',
+          head_sha: 'abc123'
         }
       ],
       expected: {
@@ -283,7 +453,7 @@ describe('calculateCheckSuiteStats', () => {
         other: 0,
         longest_checksuite: {
           duration_ms: 180000, // 3 minutes
-          name: 'Unknown',
+          name: 'Check Suite #999',
           status: 'completed'
         }
       }

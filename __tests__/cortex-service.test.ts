@@ -227,12 +227,12 @@ describe('CortexService', () => {
     }
 
     test('creates new deploy when not exists', async () => {
-      mockClient.createDeploy.mockResolvedValue({ id: 'deploy-123' })
+      mockClient.createDeploy.mockResolvedValue({ uuid: 'deploy-123', id: 1 })
 
       const result = await service.postDeploy(analysis, 'main', [])
 
       expect(result.success).toBe(true)
-      expect(result.id).toBe('deploy-123')
+      expect(result.uuid).toBe('deploy-123')
       expect(result.action).toBe('created')
       expect(mockClient.createDeploy).toHaveBeenCalledWith(
         'my-service',
@@ -252,12 +252,12 @@ describe('CortexService', () => {
           environment: 'production'
         } as CortexDeploy
       ]
-      mockClient.updateDeploy.mockResolvedValue({ id: 'deploy-123' })
+      mockClient.updateDeploy.mockResolvedValue({ uuid: 'deploy-123', id: 1 })
 
       const result = await service.postDeploy(analysis, 'main', existingDeploys)
 
       expect(result.success).toBe(true)
-      expect(result.id).toBe('deploy-123')
+      expect(result.uuid).toBe('deploy-123')
       expect(result.action).toBe('updated')
       expect(mockClient.updateDeploy).toHaveBeenCalledWith(
         'my-service',
@@ -367,7 +367,7 @@ describe('CortexService', () => {
         totalPages: 0,
         total: 0
       })
-      mockClient.createDeploy.mockResolvedValue({ id: 'deploy-123' })
+      mockClient.createDeploy.mockResolvedValue({ uuid: 'deploy-123', id: 1 })
 
       const results = await service.postDeploys(analyses, 'main')
 
@@ -390,7 +390,7 @@ describe('CortexService', () => {
         totalPages: 0,
         total: 0
       })
-      mockClient.createDeploy.mockResolvedValue({ id: 'deploy-123' })
+      mockClient.createDeploy.mockResolvedValue({ uuid: 'deploy-123', id: 1 })
 
       const results = await service.postDeploys(analyses, 'main')
 
@@ -414,8 +414,11 @@ describe('CortexService', () => {
         totalPages: 1,
         total: 1
       })
-      mockClient.createDeploy.mockResolvedValue({ id: 'new-deploy' })
-      mockClient.updateDeploy.mockResolvedValue({ id: 'updated-deploy' })
+      mockClient.createDeploy.mockResolvedValue({ uuid: 'new-deploy', id: 2 })
+      mockClient.updateDeploy.mockResolvedValue({
+        uuid: 'updated-deploy',
+        id: 3
+      })
 
       const results = await service.postDeploys(analyses, 'main')
 
@@ -435,9 +438,9 @@ describe('CortexService', () => {
         total: 0
       })
       mockClient.createDeploy
-        .mockResolvedValueOnce({ id: 'deploy-1' })
+        .mockResolvedValueOnce({ uuid: 'deploy-1', id: 4 })
         .mockRejectedValueOnce(new Error('API Error'))
-        .mockResolvedValueOnce({ id: 'deploy-3' })
+        .mockResolvedValueOnce({ uuid: 'deploy-3', id: 5 })
 
       const results = await service.postDeploys(analyses, 'main')
 
