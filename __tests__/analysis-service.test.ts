@@ -6,7 +6,8 @@ import { Commit, CheckSuite } from '../src/core'
 const createMockGitHubClient = (): jest.Mocked<GitHubClient> => ({
   getCommits: jest.fn(),
   getCheckSuites: jest.fn(),
-  getCheckRuns: jest.fn()
+  getCheckRuns: jest.fn(),
+  getWorkflowRuns: jest.fn()
 })
 
 describe('AnalysisService', () => {
@@ -42,6 +43,20 @@ describe('AnalysisService', () => {
         }
       ] as CheckSuite[]
 
+      const workflowRuns = [
+        {
+          id: 201,
+          name: 'CI',
+          event: 'push',
+          check_suite_id: 1,
+          status: 'completed',
+          conclusion: 'success',
+          created_at: '2024-01-01T10:01:00Z',
+          updated_at: '2024-01-01T10:05:00Z',
+          head_sha: 'abc123'
+        }
+      ]
+
       const checkRuns = [
         {
           id: 101,
@@ -55,6 +70,7 @@ describe('AnalysisService', () => {
       ]
 
       mockClient.getCheckSuites.mockResolvedValue(checkSuites)
+      mockClient.getWorkflowRuns.mockResolvedValue(workflowRuns)
       mockClient.getCheckRuns.mockResolvedValue(checkRuns)
 
       const result = await service.analyzeCommit(mockCommit, 'owner', 'repo')
@@ -85,6 +101,7 @@ describe('AnalysisService', () => {
 
     test('commit with no checksuites', async () => {
       mockClient.getCheckSuites.mockResolvedValue([])
+      mockClient.getWorkflowRuns.mockResolvedValue([])
 
       const result = await service.analyzeCommit(mockCommit, 'owner', 'repo')
 
@@ -124,6 +141,31 @@ describe('AnalysisService', () => {
         }
       ] as CheckSuite[]
 
+      const workflowRuns = [
+        {
+          id: 201,
+          name: 'CI',
+          event: 'push',
+          check_suite_id: 1,
+          status: 'completed',
+          conclusion: 'success',
+          created_at: '2024-01-01T10:00:00Z',
+          updated_at: '2024-01-01T10:03:00Z',
+          head_sha: 'abc123'
+        },
+        {
+          id: 202,
+          name: 'Tests',
+          event: 'push',
+          check_suite_id: 2,
+          status: 'completed',
+          conclusion: 'failure',
+          created_at: '2024-01-01T10:01:00Z',
+          updated_at: '2024-01-01T10:08:00Z',
+          head_sha: 'abc123'
+        }
+      ]
+
       const checkRuns1 = [
         {
           id: 101,
@@ -149,6 +191,7 @@ describe('AnalysisService', () => {
       ]
 
       mockClient.getCheckSuites.mockResolvedValue(checkSuites)
+      mockClient.getWorkflowRuns.mockResolvedValue(workflowRuns)
       mockClient.getCheckRuns
         .mockResolvedValueOnce(checkRuns1)
         .mockResolvedValueOnce(checkRuns2)
@@ -177,6 +220,7 @@ describe('AnalysisService', () => {
     test('handles API errors gracefully', async () => {
       const apiError = new Error('GitHub API rate limit exceeded')
       mockClient.getCheckSuites.mockRejectedValue(apiError)
+      mockClient.getWorkflowRuns.mockResolvedValue([])
 
       const result = await service.analyzeCommit(mockCommit, 'owner', 'repo')
 
@@ -199,6 +243,7 @@ describe('AnalysisService', () => {
 
     test('handles non-Error exceptions', async () => {
       mockClient.getCheckSuites.mockRejectedValue('String error')
+      mockClient.getWorkflowRuns.mockResolvedValue([])
 
       const result = await service.analyzeCommit(mockCommit, 'owner', 'repo')
 
@@ -238,10 +283,27 @@ describe('AnalysisService', () => {
             id: 1,
             conclusion: 'success',
             created_at: '2024-01-01T10:01:00Z',
-            updated_at: '2024-01-01T10:05:00Z'
+            updated_at: '2024-01-01T10:05:00Z',
+            status: 'completed',
+            head_sha: 'commit1'
           } as CheckSuite
         ])
         .mockRejectedValueOnce(new Error('API Error'))
+      mockClient.getWorkflowRuns
+        .mockResolvedValueOnce([
+          {
+            id: 201,
+            name: 'CI',
+            event: 'push',
+            check_suite_id: 1,
+            status: 'completed',
+            conclusion: 'success',
+            created_at: '2024-01-01T10:01:00Z',
+            updated_at: '2024-01-01T10:05:00Z',
+            head_sha: 'commit1'
+          }
+        ])
+        .mockResolvedValueOnce([])
       mockClient.getCheckRuns.mockResolvedValue([])
 
       const results = await service.analyzeCommits(commits, 'owner', 'repo')
@@ -290,8 +352,23 @@ describe('AnalysisService', () => {
         }
       ]
 
+      const mockWorkflowRuns = [
+        {
+          id: 201,
+          name: 'CI',
+          event: 'push',
+          check_suite_id: 1,
+          status: 'completed',
+          conclusion: 'success',
+          created_at: '2024-01-01T10:01:00Z',
+          updated_at: '2024-01-01T10:05:00Z',
+          head_sha: 'commit1'
+        }
+      ]
+
       mockClient.getCommits.mockResolvedValue(mockCommits)
       mockClient.getCheckSuites.mockResolvedValue(mockCheckSuites)
+      mockClient.getWorkflowRuns.mockResolvedValue(mockWorkflowRuns)
       mockClient.getCheckRuns.mockResolvedValue([])
 
       const since = new Date('2024-01-01T00:00:00Z')
@@ -327,6 +404,7 @@ describe('AnalysisService', () => {
 
     test('handles empty repository', async () => {
       mockClient.getCommits.mockResolvedValue([])
+      mockClient.getWorkflowRuns.mockResolvedValue([])
 
       const since = new Date('2024-01-01T00:00:00Z')
       const result = await service.analyzeRepository(

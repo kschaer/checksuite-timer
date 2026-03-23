@@ -1,5 +1,5 @@
 import * as github from '@actions/github'
-import { Commit, CheckSuite, CheckRun } from './core'
+import { Commit, CheckSuite, CheckRun, WorkflowRun } from './core'
 
 // Interface for GitHub API operations - easily mockable for testing
 export interface GitHubClient {
@@ -19,6 +19,11 @@ export interface GitHubClient {
     repo: string,
     checkSuiteId: number
   ): Promise<CheckRun[]>
+  getWorkflowRuns(
+    owner: string,
+    repo: string,
+    sha: string
+  ): Promise<WorkflowRun[]>
 }
 
 // Real implementation using GitHub API
@@ -92,6 +97,21 @@ export class GitHubApiClient implements GitHubClient {
     })
 
     return response.data.check_runs as CheckRun[]
+  }
+
+  async getWorkflowRuns(
+    owner: string,
+    repo: string,
+    sha: string
+  ): Promise<WorkflowRun[]> {
+    const response = await this.octokit.rest.actions.listWorkflowRunsForRepo({
+      owner,
+      repo,
+      head_sha: sha,
+      per_page: 100
+    })
+
+    return response.data.workflow_runs as WorkflowRun[]
   }
 }
 

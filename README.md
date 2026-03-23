@@ -6,15 +6,17 @@ Approach:
 
 This github action should be run in a scheduled workflow in a Github repository. It should be scheduled to run on a daily basis.
 
-When it runs, the action inspects all commits made to the main branch of the repository during the prior 24 hours. For those commits, the action queries for all Github Actions checksuites that ran for the given commit SHA.
+When it runs, the action inspects all commits made to the main branch of the repository during the prior 24 hours. For those commits, the action queries for all Github Actions checksuites that were **triggered by push events** (i.e., post-merge checks that ran when the commit was pushed to the main branch).
 
-The action inspects each checksuite's start and stop timestamps, with the goal of finding the overall duration of checksuites that ran on that commit.
+The action **excludes** checksuites triggered by `pull_request`, `workflow_dispatch`, `schedule`, or other events, focusing only on the checks that ran after a PR was merged to main.
 
-From those timestamps we seek the absolute minimum and maximum timestamps, across all applicable checksuites, with the goal of computing the "wall-to-wall" time that was required for all checksuites to complete.
+The action inspects each checksuite's check run start and stop timestamps, with the goal of finding the overall duration of checksuites that ran on that commit.
+
+From those timestamps we seek the absolute minimum and maximum timestamps, across all applicable check runs, with the goal of computing the "wall-to-wall" time that was required for all checksuites to complete.
 
 This time represents the total duration that an engineer spent waiting after their PR was merged for a full deploy to complete.
 
-For now, the action will simply log this total duration (in seconds).
+**Note:** Durations are measured in milliseconds but have second-level precision (GitHub API provides timestamps with second-level granularity, not milliseconds).
 
 ## Usage
 
@@ -27,7 +29,6 @@ permissions:
   contents: read        # Required to access repository commits
   actions: read         # Required to access GitHub Actions workflow runs
   checks: read          # Required to access check suites and check runs
-  pull-requests: read   # Required for check suites associated with PRs
 ```
 
 ### Inputs
@@ -92,7 +93,14 @@ The `commits_data` output contains detailed **per-commit** analysis showing how 
         "successful": 2,
         "failed": 1,
         "cancelled": 0,
-        "other": 0
+        "skipped": 0,
+        "other": 0,
+        "longest_checkrun": {
+          "duration_ms": 180000,
+          "name": "CI Tests",
+          "status": "completed",
+          "conclusion": "success"
+        }
       }
     }
   ],
@@ -105,6 +113,8 @@ The `commits_data` output contains detailed **per-commit** analysis showing how 
 ```
 
 **Key Insight**: Each commit gets its own `duration_ms` representing the **wall-to-wall time** from when the first checksuite started to when the last checksuite finished for that specific commit. This answers: *"How long did the engineer wait after this commit was merged for all checks to complete?"*
+
+**Important**: Only checksuites triggered by `push` events (post-merge checks) are included in the analysis. Checksuites triggered by `pull_request`, `workflow_dispatch`, `schedule`, or other events are excluded to focus on post-merge deployment times.
 
 ### Example Workflow
 
@@ -120,8 +130,9 @@ on:
   workflow_dispatch: # Allow manual triggering
 
 permissions:
-  contents: read
-  actions: read
+  contents: read        # Required to access repository commits
+  actions: read         # Required to access workflow runs
+  checks: read          # Required to access check suites and check runs
 
 jobs:
   track-deploy-time:
@@ -174,7 +185,6 @@ permissions:
   contents: read
   actions: read
   checks: read
-  pull-requests: read
 
 jobs:
   track-deploy-time:
@@ -205,11 +215,8 @@ Each commit creates or updates a deploy event in Cortex with:
 - **sha**: Full commit SHA
 - **url**: GitHub commit URL
 - **customData**:
-  - `duration_ms`: Wall-to-wall checksuite duration
-  - `checksuite_stats`: Breakdown of success/failure counts
-  - `total_checksuites`: Total number of checksuites
-  - `successful_checksuites`: Number of successful checksuites
-  - `failed_checksuites`: Number of failed checksuites
+  - `duration_ms`: Wall-to-wall checksuite duration in milliseconds
+  - `checksuite_stats`: Complete stats object with breakdown of success/failure/cancelled/skipped counts and longest check run info
 
 **Example Cortex Deploy:**
 
@@ -232,11 +239,15 @@ Each commit creates or updates a deploy event in Cortex with:
       "successful": 2,
       "failed": 1,
       "cancelled": 0,
-      "other": 0
-    },
-    "total_checksuites": 3,
-    "successful_checksuites": 2,
-    "failed_checksuites": 1
+      "skipped": 0,
+      "other": 0,
+      "longest_checkrun": {
+        "duration_ms": 180000,
+        "name": "CI Tests",
+        "status": "completed",
+        "conclusion": "success"
+      }
+    }
   }
 }
 ```

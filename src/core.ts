@@ -10,6 +10,18 @@ export interface CheckRun {
   head_sha: string
 }
 
+export interface WorkflowRun {
+  id: number
+  name: string
+  event: string // "push", "workflow_dispatch", "schedule", "pull_request", etc.
+  check_suite_id: number
+  status: string
+  conclusion: string | null
+  created_at: string
+  updated_at: string
+  head_sha: string
+}
+
 export interface CheckSuite {
   id: number
   status: string
@@ -102,6 +114,28 @@ export function parseTimeWindow(timeWindow: string): Date {
   }
 
   throw new Error(`Unsupported time unit: ${unit}`)
+}
+
+// Pure function: Filter check suites to only include push events
+// Uses workflow run data to determine which check suites were triggered by push
+// This matches what GitHub shows on the commit page
+export function filterPushCheckSuites(
+  checkSuites: CheckSuite[],
+  workflowRuns: WorkflowRun[]
+): CheckSuite[] {
+  // Build map of check_suite_id -> event
+  const suiteEventMap = new Map<number, string>()
+  for (const run of workflowRuns) {
+    suiteEventMap.set(run.check_suite_id, run.event)
+  }
+
+  // Filter check suites to only include push events
+  return checkSuites.filter(suite => {
+    const event = suiteEventMap.get(suite.id)
+    // Include if event is 'push', or if we don't have workflow run data (defensive)
+    // Missing workflow run data might mean non-Actions check suites
+    return !event || event === 'push'
+  })
 }
 
 // Pure function: Checksuite statistics calculation
@@ -355,7 +389,12 @@ export function shouldPostToCortex(
   analysis: CommitAnalysis,
   config: CortexConfig
 ): boolean {
-  // If postPerCommit is true, post all commits
+  // Skip commits with no checksuites AND no error (no data to report)
+  if (analysis.stats.total === 0 && !analysis.error) {
+    return false
+  }
+
+  // If postPerCommit is true, post all commits with checksuites
   if (config.postPerCommit) {
     return true
   }

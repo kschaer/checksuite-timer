@@ -1,10 +1,12 @@
+import * as core from '@actions/core'
 import { GitHubClient } from './github-client'
 import {
   Commit,
   CommitAnalysis,
   AnalysisResult,
   createCommitAnalysis,
-  calculateSummary
+  calculateSummary,
+  filterPushCheckSuites
 } from './core'
 
 // Service class for commit analysis - testable with mocked GitHubClient
@@ -18,15 +20,39 @@ export class AnalysisService {
     repo: string
   ): Promise<CommitAnalysis> {
     try {
-      // Fetch check suites
+      // Fetch all check suites for this commit
       const checkSuites = await this.gitHubClient.getCheckSuites(
         owner,
         repo,
         commit.sha
       )
 
+      // Fetch workflow runs to get event triggers (push, workflow_dispatch, etc.)
+      const workflowRuns = await this.gitHubClient.getWorkflowRuns(
+        owner,
+        repo,
+        commit.sha
+      )
+
+      // Debug logging
+      core.debug(
+        `Commit ${commit.sha.substring(0, 7)}: Found ${checkSuites.length} check suites, ${workflowRuns.length} workflow runs`
+      )
+      if (workflowRuns.length > 0) {
+        const events = workflowRuns.map(r => r.event).join(', ')
+        core.debug(`  Workflow run events: ${events}`)
+      }
+
+      // Filter to only push-triggered check suites
+      // This matches what GitHub shows on the commit page
+      const pushCheckSuites = filterPushCheckSuites(checkSuites, workflowRuns)
+
+      core.debug(
+        `  After filtering: ${pushCheckSuites.length} check suites remaining`
+      )
+
       // Fetch check runs for each check suite to get workflow names
-      for (const suite of checkSuites) {
+      for (const suite of pushCheckSuites) {
         try {
           const checkRuns = await this.gitHubClient.getCheckRuns(
             owner,
@@ -42,7 +68,7 @@ export class AnalysisService {
       }
 
       // Pure business logic (easily testable)
-      return createCommitAnalysis(commit, checkSuites, owner, repo)
+      return createCommitAnalysis(commit, pushCheckSuites, owner, repo)
     } catch (error) {
       // Enhanced error handling with better context
       let errorMessage = error instanceof Error ? error.message : String(error)
