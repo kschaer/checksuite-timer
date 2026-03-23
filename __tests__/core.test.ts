@@ -479,62 +479,181 @@ describe('calculateWallToWallDuration', () => {
       expected: 0
     },
     {
-      name: 'single checksuite',
+      name: 'single checksuite with check runs',
       checkSuites: [
         {
-          created_at: '2024-01-01T10:00:00Z',
-          updated_at: '2024-01-01T10:05:00Z'
+          id: 1,
+          created_at: '2024-01-01T09:55:00Z', // created earlier (queuing)
+          updated_at: '2024-01-01T10:05:00Z',
+          status: 'completed',
+          conclusion: 'success',
+          head_sha: 'abc123',
+          check_runs: [
+            {
+              id: 101,
+              name: 'CI',
+              status: 'completed',
+              conclusion: 'success',
+              started_at: '2024-01-01T10:00:00Z', // actual start
+              completed_at: '2024-01-01T10:03:00Z', // actual end
+              head_sha: 'abc123'
+            }
+          ]
         }
       ],
-      expected: 300000 // 5 minutes in milliseconds
+      expected: 180000 // 3 minutes actual run time (not 10 minutes from created_at)
     },
     {
-      name: 'multiple overlapping checksuites',
+      name: 'multiple overlapping check runs',
       checkSuites: [
         {
-          created_at: '2024-01-01T10:00:00Z',
-          updated_at: '2024-01-01T10:03:00Z'
+          id: 2,
+          created_at: '2024-01-01T09:50:00Z',
+          updated_at: '2024-01-01T10:08:00Z',
+          status: 'completed',
+          conclusion: 'success',
+          head_sha: 'def456',
+          check_runs: [
+            {
+              id: 201,
+              name: 'Build',
+              status: 'completed',
+              conclusion: 'success',
+              started_at: '2024-01-01T10:00:00Z',
+              completed_at: '2024-01-01T10:05:00Z',
+              head_sha: 'def456'
+            },
+            {
+              id: 202,
+              name: 'Test',
+              status: 'completed',
+              conclusion: 'success',
+              started_at: '2024-01-01T10:02:00Z',
+              completed_at: '2024-01-01T10:08:00Z',
+              head_sha: 'def456'
+            }
+          ]
+        }
+      ],
+      expected: 480000 // 8 minutes (10:00 to 10:08) based on check runs
+    },
+    {
+      name: 'check runs across multiple checksuites',
+      checkSuites: [
+        {
+          id: 3,
+          created_at: '2024-01-01T09:55:00Z',
+          updated_at: '2024-01-01T10:03:00Z',
+          status: 'completed',
+          conclusion: 'success',
+          head_sha: 'ghi789',
+          check_runs: [
+            {
+              id: 301,
+              name: 'Lint',
+              status: 'completed',
+              conclusion: 'success',
+              started_at: '2024-01-01T10:00:00Z',
+              completed_at: '2024-01-01T10:02:00Z',
+              head_sha: 'ghi789'
+            }
+          ]
         },
         {
-          created_at: '2024-01-01T10:01:00Z',
-          updated_at: '2024-01-01T10:08:00Z'
+          id: 4,
+          created_at: '2024-01-01T09:58:00Z',
+          updated_at: '2024-01-01T10:07:00Z',
+          status: 'completed',
+          conclusion: 'success',
+          head_sha: 'ghi789',
+          check_runs: [
+            {
+              id: 401,
+              name: 'E2E',
+              status: 'completed',
+              conclusion: 'success',
+              started_at: '2024-01-01T10:01:00Z',
+              completed_at: '2024-01-01T10:07:00Z',
+              head_sha: 'ghi789'
+            }
+          ]
         }
       ],
-      expected: 480000 // 8 minutes (10:00 to 10:08) in milliseconds
+      expected: 420000 // 7 minutes (10:00 to 10:07) across both suites
     },
     {
-      name: 'checksuites with gaps',
+      name: 'fallback to checksuite times when no check runs',
       checkSuites: [
         {
+          id: 5,
           created_at: '2024-01-01T10:00:00Z',
-          updated_at: '2024-01-01T10:02:00Z'
-        },
-        {
-          created_at: '2024-01-01T10:05:00Z',
-          updated_at: '2024-01-01T10:07:00Z'
+          updated_at: '2024-01-01T10:05:00Z',
+          status: 'completed',
+          conclusion: 'success',
+          head_sha: 'jkl012'
+          // No check_runs field
         }
       ],
-      expected: 420000 // 7 minutes (10:00 to 10:07, including gap) in milliseconds
+      expected: 300000 // 5 minutes fallback to created/updated times
     },
     {
-      name: 'same start and end times',
+      name: 'ignores check runs with null timestamps',
       checkSuites: [
         {
+          id: 6,
           created_at: '2024-01-01T10:00:00Z',
-          updated_at: '2024-01-01T10:00:00Z'
+          updated_at: '2024-01-01T10:10:00Z',
+          status: 'completed',
+          conclusion: 'success',
+          head_sha: 'mno345',
+          check_runs: [
+            {
+              id: 601,
+              name: 'Queued',
+              status: 'queued',
+              conclusion: null,
+              started_at: null,
+              completed_at: null,
+              head_sha: 'mno345'
+            },
+            {
+              id: 602,
+              name: 'Completed',
+              status: 'completed',
+              conclusion: 'success',
+              started_at: '2024-01-01T10:02:00Z',
+              completed_at: '2024-01-01T10:06:00Z',
+              head_sha: 'mno345'
+            }
+          ]
         }
       ],
-      expected: 0
+      expected: 240000 // 4 minutes from valid check run (ignores null timestamps)
     },
     {
-      name: 'very long duration',
+      name: 'very long duration with check runs',
       checkSuites: [
         {
-          created_at: '2024-01-01T09:00:00Z',
-          updated_at: '2024-01-01T11:30:00Z'
+          id: 7,
+          created_at: '2024-01-01T08:50:00Z',
+          updated_at: '2024-01-01T11:30:00Z',
+          status: 'completed',
+          conclusion: 'success',
+          head_sha: 'pqr678',
+          check_runs: [
+            {
+              id: 701,
+              name: 'Long Test',
+              status: 'completed',
+              conclusion: 'success',
+              started_at: '2024-01-01T09:00:00Z',
+              completed_at: '2024-01-01T11:30:00Z',
+              head_sha: 'pqr678'
+            }
+          ]
         }
       ],
-      expected: 9000000 // 2.5 hours in milliseconds
+      expected: 9000000 // 2.5 hours actual run time
     }
   ]
 

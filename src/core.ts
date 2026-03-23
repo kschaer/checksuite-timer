@@ -193,11 +193,39 @@ export function calculateCheckSuiteStats(
 }
 
 // Pure function: Wall-to-wall duration calculation (in milliseconds)
+// Uses actual check run start/completion times for accuracy
 export function calculateWallToWallDuration(checkSuites: CheckSuite[]): number {
   if (checkSuites.length === 0) {
     return 0
   }
 
+  // Collect all check runs with valid timestamps
+  const validCheckRuns: Array<{ started_at: number; completed_at: number }> = []
+
+  for (const suite of checkSuites) {
+    if (suite.check_runs && suite.check_runs.length > 0) {
+      for (const run of suite.check_runs) {
+        if (run.started_at && run.completed_at) {
+          validCheckRuns.push({
+            started_at: new Date(run.started_at).getTime(),
+            completed_at: new Date(run.completed_at).getTime()
+          })
+        }
+      }
+    }
+  }
+
+  // If we have check runs with valid timestamps, use those for accurate timing
+  if (validCheckRuns.length > 0) {
+    const earliestStart = Math.min(
+      ...validCheckRuns.map(run => run.started_at)
+    )
+    const latestEnd = Math.max(...validCheckRuns.map(run => run.completed_at))
+    return latestEnd - earliestStart
+  }
+
+  // Fallback: use check suite created/updated times if no check runs available
+  // (less accurate due to queuing time, but better than nothing)
   const createdTimes = checkSuites.map(suite =>
     new Date(suite.created_at).getTime()
   )
