@@ -1054,19 +1054,68 @@ describe('shouldPostToCortex', () => {
     postPerCommit: true
   }
 
-  test('posts all commits when postPerCommit is true', () => {
+  test('skips commits with no checksuites', () => {
+    const noChecksuitesCommit = {
+      commit: { sha: 'abc123' },
+      stats: {
+        total: 0,
+        failed: 0,
+        successful: 0,
+        cancelled: 0,
+        skipped: 0,
+        other: 0
+      }
+    }
+
+    expect(shouldPostToCortex(noChecksuitesCommit as any, config)).toBe(false)
+    expect(
+      shouldPostToCortex(noChecksuitesCommit as any, {
+        ...config,
+        postPerCommit: false
+      })
+    ).toBe(false)
+  })
+
+  test('posts commits with errors even if no checksuites', () => {
+    const errorCommitNoChecksuites = {
+      commit: { sha: 'abc123' },
+      error: 'API Error',
+      stats: {
+        total: 0,
+        failed: 0,
+        successful: 0,
+        cancelled: 0,
+        skipped: 0,
+        other: 0
+      }
+    }
+
+    // Posts when postPerCommit is true
+    expect(shouldPostToCortex(errorCommitNoChecksuites as any, config)).toBe(
+      true
+    )
+    // Skips when postPerCommit is false (errors are skipped in this mode)
+    expect(
+      shouldPostToCortex(errorCommitNoChecksuites as any, {
+        ...config,
+        postPerCommit: false
+      })
+    ).toBe(false)
+  })
+
+  test('posts commits with checksuites when postPerCommit is true', () => {
     const successfulCommit = {
       commit: { sha: 'abc123' },
-      stats: { failed: 0 }
+      stats: { total: 2, failed: 0 }
     }
     const failedCommit = {
       commit: { sha: 'def456' },
-      stats: { failed: 2 }
+      stats: { total: 3, failed: 2 }
     }
     const errorCommit = {
       commit: { sha: 'ghi789' },
       error: 'API Error',
-      stats: { failed: 0 }
+      stats: { total: 1, failed: 0 }
     }
 
     expect(shouldPostToCortex(successfulCommit as any, config)).toBe(true)
@@ -1079,16 +1128,16 @@ describe('shouldPostToCortex', () => {
 
     const successfulCommit = {
       commit: { sha: 'abc123' },
-      stats: { failed: 0 }
+      stats: { total: 2, failed: 0 }
     }
     const failedCommit = {
       commit: { sha: 'def456' },
-      stats: { failed: 2 }
+      stats: { total: 3, failed: 2 }
     }
     const errorCommit = {
       commit: { sha: 'ghi789' },
       error: 'API Error',
-      stats: { failed: 0 }
+      stats: { total: 1, failed: 0 }
     }
 
     expect(shouldPostToCortex(successfulCommit as any, configNoFailed)).toBe(
@@ -1103,7 +1152,7 @@ describe('shouldPostToCortex', () => {
 
     const cancelledCommit = {
       commit: { sha: 'abc123' },
-      stats: { failed: 0, cancelled: 1 }
+      stats: { total: 2, failed: 0, cancelled: 1 }
     }
 
     expect(shouldPostToCortex(cancelledCommit as any, configNoFailed)).toBe(

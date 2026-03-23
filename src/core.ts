@@ -389,7 +389,12 @@ export function shouldPostToCortex(
   analysis: CommitAnalysis,
   config: CortexConfig
 ): boolean {
-  // If postPerCommit is true, post all commits
+  // Skip commits with no checksuites AND no error (no data to report)
+  if (analysis.stats.total === 0 && !analysis.error) {
+    return false
+  }
+
+  // If postPerCommit is true, post all commits with checksuites
   if (config.postPerCommit) {
     return true
   }
