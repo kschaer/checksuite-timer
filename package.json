@@ -15,7 +15,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/your-username/checksuite-timer.git"
+    "url": "git+https://github.com/kschaer/checksuite-timer.git"
   },
   "keywords": [
     "actions",
@@ -26,7 +26,7 @@
     "timing",
     "deploy"
   ],
-  "author": "",
+  "author": "kschaer",
   "license": "Apache-2.0",
   "engines": {
     "node": ">=20.0.0"

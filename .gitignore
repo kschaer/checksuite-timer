@@ -7,7 +7,7 @@ node_modules/
 .pnp.*
 
 # Build output
-dist/
+# dist/ is committed for GitHub Actions marketplace
 build/
 
 # Logs

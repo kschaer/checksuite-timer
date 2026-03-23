@@ -1,6 +1,6 @@
 name: 'Check Suite Timer'
 description: 'Track the duration of GitHub Actions checksuites for commits to calculate deploy timing'
-author: 'Your Name'
+author: 'kschaer'
 
 inputs:
   branch:
