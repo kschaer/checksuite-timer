@@ -7,7 +7,9 @@ import {
   createCommitAnalysis,
   calculateSummary,
   createCortexDeployPayload,
-  shouldPostToCortex
+  shouldPostToCortex,
+  WorkflowRun,
+  CheckSuite
 } from '../src/core'
 
 describe('parseTimeWindow', () => {
@@ -99,10 +101,9 @@ describe('parseTimeWindow', () => {
 
 describe('filterPushCheckSuites', () => {
   test('filters to only push-triggered check suites', () => {
-    const checkSuites = [
+    const checkSuites: CheckSuite[] = [
       {
         id: 1,
-        event: 'push',
         status: 'completed',
         conclusion: 'success',
         created_at: '2024-01-01T10:00:00Z',
@@ -111,7 +112,6 @@ describe('filterPushCheckSuites', () => {
       },
       {
         id: 2,
-        event: 'workflow_dispatch',
         status: 'completed',
         conclusion: 'success',
         created_at: '2024-01-01T10:00:00Z',
@@ -120,38 +120,60 @@ describe('filterPushCheckSuites', () => {
       },
       {
         id: 3,
-        event: 'push',
         status: 'completed',
         conclusion: 'success',
         created_at: '2024-01-01T10:01:00Z',
         updated_at: '2024-01-01T10:05:00Z',
         head_sha: 'abc123'
-      },
+      }
+    ]
+
+    const workflowRuns: WorkflowRun[] = [
       {
-        id: 4,
-        event: 'schedule',
+        id: 101,
+        name: 'CI',
+        event: 'push',
+        check_suite_id: 1,
         status: 'completed',
         conclusion: 'success',
         created_at: '2024-01-01T10:00:00Z',
-        updated_at: '2024-01-01T10:04:00Z',
+        updated_at: '2024-01-01T10:02:00Z',
+        head_sha: 'abc123'
+      },
+      {
+        id: 102,
+        name: 'Manual Test',
+        event: 'workflow_dispatch',
+        check_suite_id: 2,
+        status: 'completed',
+        conclusion: 'success',
+        created_at: '2024-01-01T10:00:00Z',
+        updated_at: '2024-01-01T10:03:00Z',
+        head_sha: 'abc123'
+      },
+      {
+        id: 103,
+        name: 'Nightly',
+        event: 'schedule',
+        check_suite_id: 3,
+        status: 'completed',
+        conclusion: 'success',
+        created_at: '2024-01-01T10:01:00Z',
+        updated_at: '2024-01-01T10:05:00Z',
         head_sha: 'abc123'
       }
     ]
 
-    const result = filterPushCheckSuites(checkSuites as any)
+    const result = filterPushCheckSuites(checkSuites, workflowRuns)
 
-    expect(result).toHaveLength(2)
+    expect(result).toHaveLength(1)
     expect(result[0].id).toBe(1)
-    expect(result[0].event).toBe('push')
-    expect(result[1].id).toBe(3)
-    expect(result[1].event).toBe('push')
   })
 
-  test('returns empty array when no push events', () => {
-    const checkSuites = [
+  test('includes check suites without workflow run data (defensive)', () => {
+    const checkSuites: CheckSuite[] = [
       {
         id: 1,
-        event: 'workflow_dispatch',
         status: 'completed',
         conclusion: 'success',
         created_at: '2024-01-01T10:00:00Z',
@@ -160,7 +182,6 @@ describe('filterPushCheckSuites', () => {
       },
       {
         id: 2,
-        event: 'schedule',
         status: 'completed',
         conclusion: 'success',
         created_at: '2024-01-01T10:00:00Z',
@@ -169,21 +190,33 @@ describe('filterPushCheckSuites', () => {
       }
     ]
 
-    const result = filterPushCheckSuites(checkSuites as any)
+    const workflowRuns: WorkflowRun[] = [
+      {
+        id: 101,
+        name: 'CI',
+        event: 'push',
+        check_suite_id: 1,
+        status: 'completed',
+        conclusion: 'success',
+        created_at: '2024-01-01T10:00:00Z',
+        updated_at: '2024-01-01T10:02:00Z',
+        head_sha: 'abc123'
+      }
+      // No workflow run for check suite 2
+    ]
 
-    expect(result).toHaveLength(0)
+    const result = filterPushCheckSuites(checkSuites, workflowRuns)
+
+    // Should include both: suite 1 (push event) and suite 2 (no workflow run data)
+    expect(result).toHaveLength(2)
+    expect(result[0].id).toBe(1)
+    expect(result[1].id).toBe(2)
   })
 
-  test('handles empty array', () => {
-    const result = filterPushCheckSuites([])
-    expect(result).toHaveLength(0)
-  })
-
-  test('handles check suites without event field', () => {
-    const checkSuites = [
+  test('handles empty workflow runs', () => {
+    const checkSuites: CheckSuite[] = [
       {
         id: 1,
-        // No event field
         status: 'completed',
         conclusion: 'success',
         created_at: '2024-01-01T10:00:00Z',
@@ -192,10 +225,62 @@ describe('filterPushCheckSuites', () => {
       }
     ]
 
-    const result = filterPushCheckSuites(checkSuites as any)
+    const result = filterPushCheckSuites(checkSuites, [])
 
-    // Without event field, should be filtered out
-    expect(result).toHaveLength(0)
+    // Should include all check suites when no workflow run data available
+    expect(result).toHaveLength(1)
+    expect(result[0].id).toBe(1)
+  })
+
+  test('excludes pull_request events', () => {
+    const checkSuites: CheckSuite[] = [
+      {
+        id: 1,
+        status: 'completed',
+        conclusion: 'success',
+        created_at: '2024-01-01T10:00:00Z',
+        updated_at: '2024-01-01T10:02:00Z',
+        head_sha: 'abc123'
+      },
+      {
+        id: 2,
+        status: 'completed',
+        conclusion: 'success',
+        created_at: '2024-01-01T10:00:00Z',
+        updated_at: '2024-01-01T10:03:00Z',
+        head_sha: 'abc123'
+      }
+    ]
+
+    const workflowRuns: WorkflowRun[] = [
+      {
+        id: 101,
+        name: 'CI',
+        event: 'push',
+        check_suite_id: 1,
+        status: 'completed',
+        conclusion: 'success',
+        created_at: '2024-01-01T10:00:00Z',
+        updated_at: '2024-01-01T10:02:00Z',
+        head_sha: 'abc123'
+      },
+      {
+        id: 102,
+        name: 'PR Checks',
+        event: 'pull_request',
+        check_suite_id: 2,
+        status: 'completed',
+        conclusion: 'success',
+        created_at: '2024-01-01T10:00:00Z',
+        updated_at: '2024-01-01T10:03:00Z',
+        head_sha: 'abc123'
+      }
+    ]
+
+    const result = filterPushCheckSuites(checkSuites, workflowRuns)
+
+    expect(result).toHaveLength(1)
+    expect(result[0].id).toBe(1)
   })
 })
 

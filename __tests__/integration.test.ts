@@ -46,6 +46,9 @@ describe('Integration Tests', () => {
         checks: {
           listSuitesForRef: jest.fn(),
           listForSuite: jest.fn()
+        },
+        actions: {
+          listWorkflowRunsForRepo: jest.fn()
         }
       }
     }
@@ -83,7 +86,6 @@ describe('Integration Tests', () => {
       const mockCheckSuites1 = [
         {
           id: 1,
-          event: 'push',
           status: 'completed',
           conclusion: 'success',
           created_at: '2024-01-01T10:01:00Z',
@@ -94,7 +96,6 @@ describe('Integration Tests', () => {
         },
         {
           id: 2,
-          event: 'push',
           status: 'completed',
           conclusion: 'failure',
           created_at: '2024-01-01T10:02:00Z',
@@ -108,7 +109,6 @@ describe('Integration Tests', () => {
       const mockCheckSuites2 = [
         {
           id: 3,
-          event: 'push',
           status: 'completed',
           conclusion: 'success',
           created_at: '2024-01-01T11:01:00Z',
@@ -119,12 +119,55 @@ describe('Integration Tests', () => {
         }
       ]
 
+      // Mock workflow runs responses
+      const mockWorkflowRuns1 = [
+        {
+          id: 201,
+          name: 'CI',
+          event: 'push',
+          check_suite_id: 1,
+          status: 'completed',
+          conclusion: 'success',
+          created_at: '2024-01-01T10:01:00Z',
+          updated_at: '2024-01-01T10:05:00Z',
+          head_sha: 'commit1'
+        },
+        {
+          id: 202,
+          name: 'Tests',
+          event: 'push',
+          check_suite_id: 2,
+          status: 'completed',
+          conclusion: 'failure',
+          created_at: '2024-01-01T10:02:00Z',
+          updated_at: '2024-01-01T10:08:00Z',
+          head_sha: 'commit1'
+        }
+      ]
+
+      const mockWorkflowRuns2 = [
+        {
+          id: 203,
+          name: 'CI',
+          event: 'push',
+          check_suite_id: 3,
+          status: 'completed',
+          conclusion: 'success',
+          created_at: '2024-01-01T11:01:00Z',
+          updated_at: '2024-01-01T11:03:00Z',
+          head_sha: 'commit2'
+        }
+      ]
+
       mockOctokit.rest.repos.listCommits.mockResolvedValue({
         data: mockCommits
       })
       mockOctokit.rest.checks.listSuitesForRef
         .mockResolvedValueOnce({ data: { check_suites: mockCheckSuites1 } })
         .mockResolvedValueOnce({ data: { check_suites: mockCheckSuites2 } })
+      mockOctokit.rest.actions.listWorkflowRunsForRepo
+        .mockResolvedValueOnce({ data: { workflow_runs: mockWorkflowRuns1 } })
+        .mockResolvedValueOnce({ data: { workflow_runs: mockWorkflowRuns2 } })
 
       // Mock check runs for each suite
       mockOctokit.rest.checks.listForSuite
@@ -368,7 +411,6 @@ describe('Integration Tests', () => {
             check_suites: [
               {
                 id: 1,
-                event: 'push',
                 status: 'completed',
                 conclusion: 'success',
                 created_at: '2024-01-01T10:01:00Z',
@@ -380,6 +422,26 @@ describe('Integration Tests', () => {
           }
         })
         .mockRejectedValueOnce(new Error('Checksuite API error'))
+
+      mockOctokit.rest.actions.listWorkflowRunsForRepo
+        .mockResolvedValueOnce({
+          data: {
+            workflow_runs: [
+              {
+                id: 201,
+                name: 'Tests',
+                event: 'push',
+                check_suite_id: 1,
+                status: 'completed',
+                conclusion: 'success',
+                created_at: '2024-01-01T10:01:00Z',
+                updated_at: '2024-01-01T10:05:00Z',
+                head_sha: 'commit1'
+              }
+            ]
+          }
+        })
+        .mockResolvedValueOnce({ data: { workflow_runs: [] } })
 
       // Mock check runs for the successful commit
       mockOctokit.rest.checks.listForSuite.mockResolvedValue({

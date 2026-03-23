@@ -10,6 +10,18 @@ export interface CheckRun {
   head_sha: string
 }
 
+export interface WorkflowRun {
+  id: number
+  name: string
+  event: string // "push", "workflow_dispatch", "schedule", "pull_request", etc.
+  check_suite_id: number
+  status: string
+  conclusion: string | null
+  created_at: string
+  updated_at: string
+  head_sha: string
+}
+
 export interface CheckSuite {
   id: number
   status: string
@@ -17,7 +29,6 @@ export interface CheckSuite {
   created_at: string
   updated_at: string
   head_sha: string
-  event?: string // Event that triggered the check suite (push, pull_request, workflow_dispatch, schedule, etc.)
   app?: {
     name: string
     slug?: string
@@ -105,13 +116,25 @@ export function parseTimeWindow(timeWindow: string): Date {
   throw new Error(`Unsupported time unit: ${unit}`)
 }
 
-// Pure function: Filter check suites to only include push-triggered ones
-// This ensures we only measure time engineers wait for their commit's checks
-export function filterPushCheckSuites(checkSuites: CheckSuite[]): CheckSuite[] {
+// Pure function: Filter check suites to only include push events
+// Uses workflow run data to determine which check suites were triggered by push
+// This matches what GitHub shows on the commit page
+export function filterPushCheckSuites(
+  checkSuites: CheckSuite[],
+  workflowRuns: WorkflowRun[]
+): CheckSuite[] {
+  // Build map of check_suite_id -> event
+  const suiteEventMap = new Map<number, string>()
+  for (const run of workflowRuns) {
+    suiteEventMap.set(run.check_suite_id, run.event)
+  }
+
+  // Filter check suites to only include push events
   return checkSuites.filter(suite => {
-    // Only include check suites triggered by push events
-    // Excludes: workflow_dispatch (manual), schedule (cron), pull_request, etc.
-    return suite.event === 'push'
+    const event = suiteEventMap.get(suite.id)
+    // Include if event is 'push', or if we don't have workflow run data (defensive)
+    // Missing workflow run data might mean non-Actions check suites
+    return !event || event === 'push'
   })
 }
 

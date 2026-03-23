@@ -19,19 +19,26 @@ export class AnalysisService {
     repo: string
   ): Promise<CommitAnalysis> {
     try {
-      // Fetch check suites
-      let checkSuites = await this.gitHubClient.getCheckSuites(
+      // Fetch all check suites for this commit
+      const checkSuites = await this.gitHubClient.getCheckSuites(
         owner,
         repo,
         commit.sha
       )
 
-      // Filter to only push-triggered check suites (excludes manual/scheduled runs)
-      // This ensures we measure only the time engineers wait for their commit's checks
-      checkSuites = filterPushCheckSuites(checkSuites)
+      // Fetch workflow runs to get event triggers (push, workflow_dispatch, etc.)
+      const workflowRuns = await this.gitHubClient.getWorkflowRuns(
+        owner,
+        repo,
+        commit.sha
+      )
+
+      // Filter to only push-triggered check suites
+      // This matches what GitHub shows on the commit page
+      const pushCheckSuites = filterPushCheckSuites(checkSuites, workflowRuns)
 
       // Fetch check runs for each check suite to get workflow names
-      for (const suite of checkSuites) {
+      for (const suite of pushCheckSuites) {
         try {
           const checkRuns = await this.gitHubClient.getCheckRuns(
             owner,
@@ -47,7 +54,7 @@ export class AnalysisService {
       }
 
       // Pure business logic (easily testable)
-      return createCommitAnalysis(commit, checkSuites, owner, repo)
+      return createCommitAnalysis(commit, pushCheckSuites, owner, repo)
     } catch (error) {
       // Enhanced error handling with better context
       let errorMessage = error instanceof Error ? error.message : String(error)
