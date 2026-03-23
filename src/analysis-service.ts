@@ -1,3 +1,4 @@
+import * as core from '@actions/core'
 import { GitHubClient } from './github-client'
 import {
   Commit,
@@ -33,9 +34,22 @@ export class AnalysisService {
         commit.sha
       )
 
+      // Debug logging
+      core.debug(
+        `Commit ${commit.sha.substring(0, 7)}: Found ${checkSuites.length} check suites, ${workflowRuns.length} workflow runs`
+      )
+      if (workflowRuns.length > 0) {
+        const events = workflowRuns.map(r => r.event).join(', ')
+        core.debug(`  Workflow run events: ${events}`)
+      }
+
       // Filter to only push-triggered check suites
       // This matches what GitHub shows on the commit page
       const pushCheckSuites = filterPushCheckSuites(checkSuites, workflowRuns)
+
+      core.debug(
+        `  After filtering: ${pushCheckSuites.length} check suites remaining`
+      )
 
       // Fetch check runs for each check suite to get workflow names
       for (const suite of pushCheckSuites) {
