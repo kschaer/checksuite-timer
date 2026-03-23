@@ -77,8 +77,8 @@ export class CortexApiClient implements CortexClient {
 
     // Defensive: handle null or malformed responses
     if (!data || typeof data !== 'object') {
-      core.warning(
-        `Cortex API returned invalid response (expected object, got ${typeof data})`
+      core.debug(
+        `Cortex API returned invalid response (expected object, got ${typeof data}), using empty defaults`
       )
       return {
         deployments: [],
@@ -90,8 +90,8 @@ export class CortexApiClient implements CortexClient {
 
     // Defensive: ensure deployments is an array
     if (!Array.isArray(data.deployments)) {
-      core.warning(
-        `Cortex API returned invalid deployments field (expected array, got ${typeof data.deployments})`
+      core.debug(
+        `Cortex API returned invalid deployments field (expected array, got ${typeof data.deployments}), using empty array`
       )
       data.deployments = []
     }

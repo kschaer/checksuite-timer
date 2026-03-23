@@ -45,7 +45,7 @@ outputs:
     description: 'Average duration across all commits in milliseconds'
 
 runs:
-  using: 'node20'
+  using: 'node24'
   main: 'dist/index.js'
 
 branding:
