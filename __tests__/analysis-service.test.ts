@@ -49,7 +49,12 @@ describe('AnalysisService', () => {
           failed: 0,
           cancelled: 0,
           skipped: 0,
-          other: 0
+          other: 0,
+          longest_checksuite: {
+            duration_ms: 240000,
+            name: 'Unknown',
+            status: 'completed'
+          }
         },
         expectError: false
       },
@@ -72,15 +77,19 @@ describe('AnalysisService', () => {
         checkSuites: [
           {
             id: 1,
+            status: 'completed',
             conclusion: 'success',
             created_at: '2024-01-01T10:00:00Z',
-            updated_at: '2024-01-01T10:03:00Z'
+            updated_at: '2024-01-01T10:03:00Z',
+            app: { name: 'Tests' }
           },
           {
             id: 2,
+            status: 'completed',
             conclusion: 'failure',
             created_at: '2024-01-01T10:01:00Z',
-            updated_at: '2024-01-01T10:08:00Z'
+            updated_at: '2024-01-01T10:08:00Z',
+            app: { name: 'Build' }
           }
         ] as CheckSuite[],
         expectedDuration: 480000, // 8 minutes (10:00 to 10:08) in milliseconds
@@ -90,7 +99,12 @@ describe('AnalysisService', () => {
           failed: 1,
           cancelled: 0,
           skipped: 0,
-          other: 0
+          other: 0,
+          longest_checksuite: {
+            duration_ms: 420000, // 7 minutes (10:01 to 10:08)
+            name: 'Build',
+            status: 'completed'
+          }
         },
         expectError: false
       }

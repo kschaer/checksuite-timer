@@ -7,6 +7,9 @@ export interface CheckSuite {
   created_at: string
   updated_at: string
   head_sha: string
+  app?: {
+    name: string
+  }
 }
 
 export interface Commit {
@@ -36,6 +39,11 @@ export interface CheckSuiteStats {
   cancelled: number
   skipped: number
   other: number
+  longest_checksuite?: {
+    duration_ms: number
+    name: string
+    status: string
+  }
 }
 
 export interface CommitAnalysis {
@@ -94,7 +102,11 @@ export function calculateCheckSuiteStats(
     other: 0
   }
 
+  let longestDuration = 0
+  let longestSuite: CheckSuite | null = null
+
   for (const suite of checkSuites) {
+    // Track conclusion counts
     switch (suite.conclusion) {
       case 'success':
         stats.successful++
@@ -113,6 +125,25 @@ export function calculateCheckSuiteStats(
       default:
         stats.other++
         break
+    }
+
+    // Track longest running checksuite
+    const createdAt = new Date(suite.created_at).getTime()
+    const updatedAt = new Date(suite.updated_at).getTime()
+    const duration = updatedAt - createdAt
+
+    if (duration > longestDuration) {
+      longestDuration = duration
+      longestSuite = suite
+    }
+  }
+
+  // Add longest checksuite info if we found one
+  if (longestSuite) {
+    stats.longest_checksuite = {
+      duration_ms: longestDuration,
+      name: longestSuite.app?.name || 'Unknown',
+      status: longestSuite.status
     }
   }
 

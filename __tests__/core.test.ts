@@ -112,23 +112,67 @@ describe('calculateCheckSuiteStats', () => {
     },
     {
       name: 'all successful',
-      checkSuites: [{ conclusion: 'success' }, { conclusion: 'success' }],
+      checkSuites: [
+        {
+          conclusion: 'success',
+          created_at: '2024-01-01T10:00:00Z',
+          updated_at: '2024-01-01T10:02:00Z',
+          status: 'completed',
+          app: { name: 'CI Tests' }
+        },
+        {
+          conclusion: 'success',
+          created_at: '2024-01-01T10:00:00Z',
+          updated_at: '2024-01-01T10:05:00Z',
+          status: 'completed',
+          app: { name: 'Build' }
+        }
+      ],
       expected: {
         total: 2,
         successful: 2,
         failed: 0,
         cancelled: 0,
         skipped: 0,
-        other: 0
+        other: 0,
+        longest_checksuite: {
+          duration_ms: 300000, // 5 minutes
+          name: 'Build',
+          status: 'completed'
+        }
       }
     },
     {
       name: 'mixed results',
       checkSuites: [
-        { conclusion: 'success' },
-        { conclusion: 'failure' },
-        { conclusion: 'cancelled' },
-        { conclusion: 'neutral' }
+        {
+          conclusion: 'success',
+          created_at: '2024-01-01T10:00:00Z',
+          updated_at: '2024-01-01T10:03:00Z',
+          status: 'completed',
+          app: { name: 'Tests' }
+        },
+        {
+          conclusion: 'failure',
+          created_at: '2024-01-01T10:00:00Z',
+          updated_at: '2024-01-01T10:10:00Z',
+          status: 'completed',
+          app: { name: 'Lint' }
+        },
+        {
+          conclusion: 'cancelled',
+          created_at: '2024-01-01T10:00:00Z',
+          updated_at: '2024-01-01T10:01:00Z',
+          status: 'completed',
+          app: { name: 'Deploy' }
+        },
+        {
+          conclusion: 'neutral',
+          created_at: '2024-01-01T10:00:00Z',
+          updated_at: '2024-01-01T10:02:00Z',
+          status: 'completed',
+          app: { name: 'Security' }
+        }
       ],
       expected: {
         total: 4,
@@ -136,15 +180,38 @@ describe('calculateCheckSuiteStats', () => {
         failed: 1,
         cancelled: 1,
         skipped: 0,
-        other: 1
+        other: 1,
+        longest_checksuite: {
+          duration_ms: 600000, // 10 minutes
+          name: 'Lint',
+          status: 'completed'
+        }
       }
     },
     {
       name: 'different failure types',
       checkSuites: [
-        { conclusion: 'failure' },
-        { conclusion: 'startup_failure' },
-        { conclusion: 'timed_out' }
+        {
+          conclusion: 'failure',
+          created_at: '2024-01-01T10:00:00Z',
+          updated_at: '2024-01-01T10:04:00Z',
+          status: 'completed',
+          app: { name: 'Test 1' }
+        },
+        {
+          conclusion: 'startup_failure',
+          created_at: '2024-01-01T10:00:00Z',
+          updated_at: '2024-01-01T10:01:00Z',
+          status: 'completed',
+          app: { name: 'Test 2' }
+        },
+        {
+          conclusion: 'timed_out',
+          created_at: '2024-01-01T10:00:00Z',
+          updated_at: '2024-01-01T10:30:00Z',
+          status: 'completed',
+          app: { name: 'Test 3' }
+        }
       ],
       expected: {
         total: 3,
@@ -152,15 +219,36 @@ describe('calculateCheckSuiteStats', () => {
         failed: 3,
         cancelled: 0,
         skipped: 0,
-        other: 0
+        other: 0,
+        longest_checksuite: {
+          duration_ms: 1800000, // 30 minutes
+          name: 'Test 3',
+          status: 'completed'
+        }
       }
     },
     {
       name: 'null conclusions',
       checkSuites: [
-        { conclusion: null },
-        { conclusion: undefined },
-        { conclusion: 'skipped' }
+        {
+          conclusion: null,
+          created_at: '2024-01-01T10:00:00Z',
+          updated_at: '2024-01-01T10:01:00Z',
+          status: 'queued'
+        },
+        {
+          conclusion: undefined,
+          created_at: '2024-01-01T10:00:00Z',
+          updated_at: '2024-01-01T10:02:00Z',
+          status: 'in_progress'
+        },
+        {
+          conclusion: 'skipped',
+          created_at: '2024-01-01T10:00:00Z',
+          updated_at: '2024-01-01T10:05:00Z',
+          status: 'completed',
+          app: { name: 'Skipped Task' }
+        }
       ],
       expected: {
         total: 3,
@@ -168,7 +256,36 @@ describe('calculateCheckSuiteStats', () => {
         failed: 0,
         cancelled: 0,
         skipped: 1,
-        other: 2
+        other: 2,
+        longest_checksuite: {
+          duration_ms: 300000, // 5 minutes
+          name: 'Skipped Task',
+          status: 'completed'
+        }
+      }
+    },
+    {
+      name: 'checksuite without app name',
+      checkSuites: [
+        {
+          conclusion: 'success',
+          created_at: '2024-01-01T10:00:00Z',
+          updated_at: '2024-01-01T10:03:00Z',
+          status: 'completed'
+        }
+      ],
+      expected: {
+        total: 1,
+        successful: 1,
+        failed: 0,
+        cancelled: 0,
+        skipped: 0,
+        other: 0,
+        longest_checksuite: {
+          duration_ms: 180000, // 3 minutes
+          name: 'Unknown',
+          status: 'completed'
+        }
       }
     }
   ]

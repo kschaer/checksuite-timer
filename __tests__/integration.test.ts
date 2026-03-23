@@ -86,7 +86,8 @@ describe('Integration Tests', () => {
           conclusion: 'success',
           created_at: '2024-01-01T10:01:00Z',
           updated_at: '2024-01-01T10:05:00Z',
-          head_sha: 'commit1'
+          head_sha: 'commit1',
+          app: { name: 'CI Tests' }
         },
         {
           id: 2,
@@ -94,7 +95,8 @@ describe('Integration Tests', () => {
           conclusion: 'failure',
           created_at: '2024-01-01T10:02:00Z',
           updated_at: '2024-01-01T10:08:00Z',
-          head_sha: 'commit1'
+          head_sha: 'commit1',
+          app: { name: 'Build' }
         }
       ]
 
@@ -105,7 +107,8 @@ describe('Integration Tests', () => {
           conclusion: 'success',
           created_at: '2024-01-01T11:01:00Z',
           updated_at: '2024-01-01T11:03:00Z',
-          head_sha: 'commit2'
+          head_sha: 'commit2',
+          app: { name: 'Deploy' }
         }
       ]
 
@@ -172,7 +175,12 @@ describe('Integration Tests', () => {
         failed: 1,
         cancelled: 0,
         skipped: 0,
-        other: 0
+        other: 0,
+        longest_checksuite: {
+          duration_ms: 360000, // 6 minutes (10:02 to 10:08)
+          name: 'Build',
+          status: 'completed'
+        }
       })
 
       // Verify second commit analysis
@@ -184,7 +192,12 @@ describe('Integration Tests', () => {
         failed: 0,
         cancelled: 0,
         skipped: 0,
-        other: 0
+        other: 0,
+        longest_checksuite: {
+          duration_ms: 120000, // 2 minutes (11:01 to 11:03)
+          name: 'Deploy',
+          status: 'completed'
+        }
       })
 
       // Verify summary
@@ -298,9 +311,11 @@ describe('Integration Tests', () => {
             check_suites: [
               {
                 id: 1,
+                status: 'completed',
                 conclusion: 'success',
                 created_at: '2024-01-01T10:01:00Z',
-                updated_at: '2024-01-01T10:05:00Z'
+                updated_at: '2024-01-01T10:05:00Z',
+                app: { name: 'Tests' }
               }
             ]
           }
