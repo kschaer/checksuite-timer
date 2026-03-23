@@ -16,7 +16,7 @@ describe('CortexApiClient', () => {
   describe('getDeploys', () => {
     test('successfully fetches deploys', async () => {
       const mockResponse = {
-        deploys: [
+        deployments: [
           {
             uuid: 'deploy-1',
             sha: 'abc123',
@@ -50,7 +50,7 @@ describe('CortexApiClient', () => {
 
     test('defaults to page 0', async () => {
       const mockResponse = {
-        deploys: [],
+        deployments: [],
         page: 0,
         totalPages: 0,
         total: 0
@@ -79,6 +79,45 @@ describe('CortexApiClient', () => {
       await expect(client.getDeploys('nonexistent')).rejects.toThrow(
         "Cortex entity 'nonexistent' not found"
       )
+    })
+
+    test('handles malformed response with missing deploys field', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({ page: 0, totalPages: 0 }) // Missing deploys field
+      } as Response)
+
+      const result = await client.getDeploys('my-service')
+
+      expect(result.deployments).toEqual([])
+      expect(result.page).toBe(0)
+      expect(result.totalPages).toBe(0)
+      expect(result.total).toBe(0)
+    })
+
+    test('handles completely malformed response', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => null // Null response
+      } as Response)
+
+      const result = await client.getDeploys('my-service')
+
+      expect(result.deployments).toEqual([])
+      expect(result.page).toBe(0)
+      expect(result.totalPages).toBe(0)
+      expect(result.total).toBe(0)
+    })
+
+    test('handles response with non-array deploys', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({ deploys: 'not-an-array', page: 0 }) // Wrong type
+      } as Response)
+
+      const result = await client.getDeploys('my-service')
+
+      expect(result.deployments).toEqual([])
     })
   })
 

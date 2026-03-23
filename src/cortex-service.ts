@@ -45,10 +45,10 @@ export class CortexService {
     while (hasMorePages) {
       try {
         const response = await this.cortexClient.getDeploys(entityId, page)
-        allDeploys.push(...response.deploys)
+        allDeploys.push(...response.deployments)
 
         core.debug(
-          `Fetched page ${page} of deploys: ${response.deploys.length} deploys (total so far: ${allDeploys.length})`
+          `Fetched page ${page} of deploys: ${response.deployments.length} deploys (total so far: ${allDeploys.length})`
         )
 
         // Check if there are more pages

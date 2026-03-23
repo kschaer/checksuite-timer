@@ -18,7 +18,7 @@ export interface CortexDeploy {
 }
 
 export interface CortexDeploysResponse {
-  deploys: CortexDeploy[]
+  deployments: CortexDeploy[]
   page: number
   totalPages: number
   total: number
@@ -62,7 +62,28 @@ export class CortexApiClient implements CortexClient {
       await this.handleErrorResponse(response, entityId)
     }
 
-    return (await response.json()) as CortexDeploysResponse
+    const data = (await response.json()) as any
+
+    // Defensive handling: ensure the response has the expected structure
+    if (!data || typeof data !== 'object') {
+      core.debug(
+        `Unexpected Cortex API response format: ${JSON.stringify(data)}`
+      )
+      return {
+        deployments: [],
+        page: 0,
+        totalPages: 0,
+        total: 0
+      }
+    }
+
+    // Return with defaults for missing fields
+    return {
+      deployments: Array.isArray(data.deployments) ? data.deployments : [],
+      page: typeof data.page === 'number' ? data.page : page,
+      totalPages: typeof data.totalPages === 'number' ? data.totalPages : 1,
+      total: typeof data.total === 'number' ? data.total : 0
+    }
   }
 
   async createDeploy(

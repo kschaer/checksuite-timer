@@ -34,7 +34,7 @@ describe('CortexService', () => {
     test('fetches all pages of deploys', async () => {
       mockClient.getDeploys
         .mockResolvedValueOnce({
-          deploys: [
+          deployments: [
             {
               uuid: 'deploy-1',
               sha: 'abc123',
@@ -46,7 +46,7 @@ describe('CortexService', () => {
           total: 2
         })
         .mockResolvedValueOnce({
-          deploys: [
+          deployments: [
             {
               uuid: 'deploy-2',
               sha: 'def456',
@@ -70,7 +70,7 @@ describe('CortexService', () => {
 
     test('caches deploys for subsequent calls', async () => {
       mockClient.getDeploys.mockResolvedValue({
-        deploys: [
+        deployments: [
           {
             uuid: 'deploy-1',
             sha: 'abc123',
@@ -91,7 +91,7 @@ describe('CortexService', () => {
 
     test('handles single page response', async () => {
       mockClient.getDeploys.mockResolvedValue({
-        deploys: [
+        deployments: [
           {
             uuid: 'deploy-1',
             sha: 'abc123',
@@ -111,7 +111,7 @@ describe('CortexService', () => {
 
     test('handles empty deploys', async () => {
       mockClient.getDeploys.mockResolvedValue({
-        deploys: [],
+        deployments: [],
         page: 0,
         totalPages: 0,
         total: 0
@@ -340,7 +340,7 @@ describe('CortexService', () => {
 
     test('posts all commits when postPerCommit is true', async () => {
       mockClient.getDeploys.mockResolvedValue({
-        deploys: [],
+        deployments: [],
         page: 0,
         totalPages: 0,
         total: 0
@@ -363,7 +363,7 @@ describe('CortexService', () => {
       service = new CortexService(mockClient, config)
 
       mockClient.getDeploys.mockResolvedValue({
-        deploys: [],
+        deployments: [],
         page: 0,
         totalPages: 0,
         total: 0
@@ -381,7 +381,7 @@ describe('CortexService', () => {
 
     test('updates existing deploys idempotently', async () => {
       mockClient.getDeploys.mockResolvedValue({
-        deploys: [
+        deployments: [
           {
             uuid: 'existing-1',
             sha: 'abc123',
@@ -407,7 +407,7 @@ describe('CortexService', () => {
 
     test('handles mixed success and failure', async () => {
       mockClient.getDeploys.mockResolvedValue({
-        deploys: [],
+        deployments: [],
         page: 0,
         totalPages: 0,
         total: 0
@@ -427,7 +427,7 @@ describe('CortexService', () => {
 
     test('handles empty analyses array', async () => {
       mockClient.getDeploys.mockResolvedValue({
-        deploys: [],
+        deployments: [],
         page: 0,
         totalPages: 0,
         total: 0
