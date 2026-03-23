@@ -179,3 +179,81 @@ export function calculateSummary(
     failed_commits: analyses.filter(a => a.error || a.stats.failed > 0).length
   }
 }
+
+// Cortex.io integration types
+export interface CortexDeployPayload {
+  timestamp: string // ISO8601 UTC
+  title: string
+  type: 'DEPLOY' | 'SCALE' | 'ROLLBACK' | 'RESTART'
+  deployer?: {
+    name?: string
+    email?: string
+  }
+  environment?: string
+  sha?: string
+  url?: string
+  customData?: Record<string, unknown>
+}
+
+export interface CortexDeployResponse {
+  id: string
+}
+
+export interface CortexConfig {
+  apiKey: string
+  entityId: string
+  environment: string
+  titleTemplate: string
+  postPerCommit: boolean
+}
+
+// Pure function: Create Cortex deploy payload from commit analysis
+export function createCortexDeployPayload(
+  analysis: CommitAnalysis,
+  config: CortexConfig,
+  branch: string
+): CortexDeployPayload {
+  // Extract name from email (simple heuristic: part before @)
+  const email = analysis.commit.committer_email
+  const name = email.split('@')[0]
+
+  // Replace template variables
+  const title = config.titleTemplate
+    .replace('{sha}', analysis.commit.sha.substring(0, 7))
+    .replace('{branch}', branch)
+    .replace('{email}', email)
+
+  return {
+    timestamp: analysis.commit.timestamp,
+    title,
+    type: 'DEPLOY',
+    deployer: {
+      name,
+      email
+    },
+    environment: config.environment,
+    sha: analysis.commit.sha,
+    url: analysis.commit.url,
+    customData: {
+      duration_seconds: analysis.duration_seconds,
+      checksuite_stats: analysis.stats,
+      total_checksuites: analysis.stats.total,
+      successful_checksuites: analysis.stats.successful,
+      failed_checksuites: analysis.stats.failed
+    }
+  }
+}
+
+// Pure function: Determine if a commit should be posted to Cortex
+export function shouldPostToCortex(
+  analysis: CommitAnalysis,
+  config: CortexConfig
+): boolean {
+  // If postPerCommit is true, post all commits
+  if (config.postPerCommit) {
+    return true
+  }
+
+  // Otherwise, only post commits without errors and no failures
+  return !analysis.error && analysis.stats.failed === 0
+}

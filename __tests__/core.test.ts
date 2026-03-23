@@ -4,7 +4,9 @@ import {
   calculateWallToWallDuration,
   formatCommitData,
   createCommitAnalysis,
-  calculateSummary
+  calculateSummary,
+  createCortexDeployPayload,
+  shouldPostToCortex
 } from '../src/core'
 
 describe('parseTimeWindow', () => {
@@ -303,5 +305,171 @@ describe('calculateSummary', () => {
   test.each(testCases)('$name', ({ analyses, expected }) => {
     const result = calculateSummary(analyses as any)
     expect(result).toEqual(expected)
+  })
+})
+
+describe('createCortexDeployPayload', () => {
+  test('creates payload with all fields populated', () => {
+    const analysis = {
+      commit: {
+        sha: 'abc123def456789012345678901234567890abcd',
+        timestamp: '2024-03-04T12:00:00Z',
+        committer_email: 'john.doe@example.com',
+        url: 'https://github.com/owner/repo/commit/abc123def456'
+      },
+      checksuites: [],
+      duration_seconds: 270,
+      stats: {
+        total: 3,
+        successful: 2,
+        failed: 1,
+        cancelled: 0,
+        other: 0
+      }
+    }
+
+    const config = {
+      apiKey: 'test-key',
+      entityId: 'my-service',
+      environment: 'production',
+      titleTemplate: 'Deploy {sha} to {branch}',
+      postPerCommit: true
+    }
+
+    const payload = createCortexDeployPayload(analysis as any, config, 'main')
+
+    expect(payload.timestamp).toBe('2024-03-04T12:00:00Z')
+    expect(payload.title).toBe('Deploy abc123d to main')
+    expect(payload.type).toBe('DEPLOY')
+    expect(payload.deployer?.email).toBe('john.doe@example.com')
+    expect(payload.deployer?.name).toBe('john.doe')
+    expect(payload.environment).toBe('production')
+    expect(payload.sha).toBe('abc123def456789012345678901234567890abcd')
+    expect(payload.url).toBe('https://github.com/owner/repo/commit/abc123def456')
+    expect(payload.customData?.duration_seconds).toBe(270)
+    expect(payload.customData?.checksuite_stats).toEqual(analysis.stats)
+    expect(payload.customData?.total_checksuites).toBe(3)
+    expect(payload.customData?.successful_checksuites).toBe(2)
+    expect(payload.customData?.failed_checksuites).toBe(1)
+  })
+
+  test('handles custom title template with email', () => {
+    const analysis = {
+      commit: {
+        sha: 'xyz789',
+        timestamp: '2024-03-04T12:00:00Z',
+        committer_email: 'user@company.com',
+        url: 'https://github.com/owner/repo/commit/xyz789'
+      },
+      checksuites: [],
+      duration_seconds: 100,
+      stats: { total: 1, successful: 1, failed: 0, cancelled: 0, other: 0 }
+    }
+
+    const config = {
+      apiKey: 'test-key',
+      entityId: 'my-service',
+      environment: 'staging',
+      titleTemplate: '{email} deployed {sha}',
+      postPerCommit: true
+    }
+
+    const payload = createCortexDeployPayload(analysis as any, config, 'develop')
+
+    expect(payload.title).toBe('user@company.com deployed xyz789')
+  })
+
+  test('extracts deployer name from email', () => {
+    const analysis = {
+      commit: {
+        sha: 'abc123',
+        timestamp: '2024-03-04T12:00:00Z',
+        committer_email: 'first.last+tag@domain.co.uk',
+        url: 'https://github.com/owner/repo/commit/abc123'
+      },
+      checksuites: [],
+      duration_seconds: 50,
+      stats: { total: 0, successful: 0, failed: 0, cancelled: 0, other: 0 }
+    }
+
+    const config = {
+      apiKey: 'test-key',
+      entityId: 'my-service',
+      environment: 'production',
+      titleTemplate: 'Deploy {sha} to {branch}',
+      postPerCommit: true
+    }
+
+    const payload = createCortexDeployPayload(analysis as any, config, 'main')
+
+    expect(payload.deployer?.name).toBe('first.last+tag')
+    expect(payload.deployer?.email).toBe('first.last+tag@domain.co.uk')
+  })
+})
+
+describe('shouldPostToCortex', () => {
+  const config = {
+    apiKey: 'test-key',
+    entityId: 'my-service',
+    environment: 'production',
+    titleTemplate: 'Deploy {sha} to {branch}',
+    postPerCommit: true
+  }
+
+  test('posts all commits when postPerCommit is true', () => {
+    const successfulCommit = {
+      commit: { sha: 'abc123' },
+      stats: { failed: 0 }
+    }
+    const failedCommit = {
+      commit: { sha: 'def456' },
+      stats: { failed: 2 }
+    }
+    const errorCommit = {
+      commit: { sha: 'ghi789' },
+      error: 'API Error',
+      stats: { failed: 0 }
+    }
+
+    expect(shouldPostToCortex(successfulCommit as any, config)).toBe(true)
+    expect(shouldPostToCortex(failedCommit as any, config)).toBe(true)
+    expect(shouldPostToCortex(errorCommit as any, config)).toBe(true)
+  })
+
+  test('skips failed commits when postPerCommit is false', () => {
+    const configNoFailed = { ...config, postPerCommit: false }
+
+    const successfulCommit = {
+      commit: { sha: 'abc123' },
+      stats: { failed: 0 }
+    }
+    const failedCommit = {
+      commit: { sha: 'def456' },
+      stats: { failed: 2 }
+    }
+    const errorCommit = {
+      commit: { sha: 'ghi789' },
+      error: 'API Error',
+      stats: { failed: 0 }
+    }
+
+    expect(shouldPostToCortex(successfulCommit as any, configNoFailed)).toBe(
+      true
+    )
+    expect(shouldPostToCortex(failedCommit as any, configNoFailed)).toBe(false)
+    expect(shouldPostToCortex(errorCommit as any, configNoFailed)).toBe(false)
+  })
+
+  test('posts commits with cancelled or other statuses when postPerCommit is false', () => {
+    const configNoFailed = { ...config, postPerCommit: false }
+
+    const cancelledCommit = {
+      commit: { sha: 'abc123' },
+      stats: { failed: 0, cancelled: 1 }
+    }
+
+    expect(shouldPostToCortex(cancelledCommit as any, configNoFailed)).toBe(
+      true
+    )
   })
 })

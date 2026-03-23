@@ -2,11 +2,15 @@ import * as core from '@actions/core'
 import { parseTimeWindow } from './core'
 import { createGitHubClient } from './github-client'
 import { AnalysisService } from './analysis-service'
+import { createCortexClient } from './cortex-client'
+import { CortexService } from './cortex-service'
 import {
   parseActionInputs,
   getRepositoryContext,
   setActionOutputs,
-  logAnalysisResults
+  logAnalysisResults,
+  parseCortexConfig,
+  logCortexResults
 } from './action-io'
 
 // Clean, testable main function with clear separation of concerns
@@ -53,7 +57,31 @@ export async function run(): Promise<void> {
     // 7. Log results (testable by mocking core.info/warning)
     logAnalysisResults(result)
 
-    // 8. Set outputs (testable by mocking core.setOutput)
+    // 8. Post to Cortex if configured
+    const cortexConfig = parseCortexConfig()
+    if (cortexConfig) {
+      core.info('Cortex integration enabled - posting deploy data...')
+
+      try {
+        const cortexClient = createCortexClient(cortexConfig.apiKey)
+        const cortexService = new CortexService(cortexClient, cortexConfig)
+
+        const cortexResults = await cortexService.postDeploys(
+          result.commits,
+          inputs.branch
+        )
+
+        logCortexResults(cortexResults)
+      } catch (error) {
+        core.warning(
+          `Cortex integration error: ${error instanceof Error ? error.message : String(error)}`
+        )
+      }
+    } else {
+      core.info('Cortex integration disabled (no API key provided)')
+    }
+
+    // 9. Set outputs (testable by mocking core.setOutput)
     setActionOutputs(result)
   } catch (error) {
     core.setFailed(error instanceof Error ? error.message : String(error))
@@ -70,3 +98,5 @@ export * from './core'
 export * from './github-client'
 export * from './analysis-service'
 export * from './action-io'
+export * from './cortex-client'
+export * from './cortex-service'
