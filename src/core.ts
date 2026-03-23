@@ -17,6 +17,7 @@ export interface CheckSuite {
   created_at: string
   updated_at: string
   head_sha: string
+  event?: string // Event that triggered the check suite (push, pull_request, workflow_dispatch, schedule, etc.)
   app?: {
     name: string
     slug?: string
@@ -102,6 +103,16 @@ export function parseTimeWindow(timeWindow: string): Date {
   }
 
   throw new Error(`Unsupported time unit: ${unit}`)
+}
+
+// Pure function: Filter check suites to only include push-triggered ones
+// This ensures we only measure time engineers wait for their commit's checks
+export function filterPushCheckSuites(checkSuites: CheckSuite[]): CheckSuite[] {
+  return checkSuites.filter(suite => {
+    // Only include check suites triggered by push events
+    // Excludes: workflow_dispatch (manual), schedule (cron), pull_request, etc.
+    return suite.event === 'push'
+  })
 }
 
 // Pure function: Checksuite statistics calculation

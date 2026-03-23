@@ -83,6 +83,7 @@ describe('Integration Tests', () => {
       const mockCheckSuites1 = [
         {
           id: 1,
+          event: 'push',
           status: 'completed',
           conclusion: 'success',
           created_at: '2024-01-01T10:01:00Z',
@@ -93,6 +94,7 @@ describe('Integration Tests', () => {
         },
         {
           id: 2,
+          event: 'push',
           status: 'completed',
           conclusion: 'failure',
           created_at: '2024-01-01T10:02:00Z',
@@ -106,6 +108,7 @@ describe('Integration Tests', () => {
       const mockCheckSuites2 = [
         {
           id: 3,
+          event: 'push',
           status: 'completed',
           conclusion: 'success',
           created_at: '2024-01-01T11:01:00Z',
@@ -365,10 +368,12 @@ describe('Integration Tests', () => {
             check_suites: [
               {
                 id: 1,
+                event: 'push',
                 status: 'completed',
                 conclusion: 'success',
                 created_at: '2024-01-01T10:01:00Z',
                 updated_at: '2024-01-01T10:05:00Z',
+                head_sha: 'commit1',
                 app: { name: 'Tests' }
               }
             ]

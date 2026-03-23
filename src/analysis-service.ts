@@ -4,7 +4,8 @@ import {
   CommitAnalysis,
   AnalysisResult,
   createCommitAnalysis,
-  calculateSummary
+  calculateSummary,
+  filterPushCheckSuites
 } from './core'
 
 // Service class for commit analysis - testable with mocked GitHubClient
@@ -19,11 +20,15 @@ export class AnalysisService {
   ): Promise<CommitAnalysis> {
     try {
       // Fetch check suites
-      const checkSuites = await this.gitHubClient.getCheckSuites(
+      let checkSuites = await this.gitHubClient.getCheckSuites(
         owner,
         repo,
         commit.sha
       )
+
+      // Filter to only push-triggered check suites (excludes manual/scheduled runs)
+      // This ensures we measure only the time engineers wait for their commit's checks
+      checkSuites = filterPushCheckSuites(checkSuites)
 
       // Fetch check runs for each check suite to get workflow names
       for (const suite of checkSuites) {

@@ -1,5 +1,6 @@
 import {
   parseTimeWindow,
+  filterPushCheckSuites,
   calculateCheckSuiteStats,
   calculateWallToWallDuration,
   formatCommitData,
@@ -94,6 +95,108 @@ describe('parseTimeWindow', () => {
       expect(() => parseTimeWindow(input)).toThrow()
     }
   )
+})
+
+describe('filterPushCheckSuites', () => {
+  test('filters to only push-triggered check suites', () => {
+    const checkSuites = [
+      {
+        id: 1,
+        event: 'push',
+        status: 'completed',
+        conclusion: 'success',
+        created_at: '2024-01-01T10:00:00Z',
+        updated_at: '2024-01-01T10:02:00Z',
+        head_sha: 'abc123'
+      },
+      {
+        id: 2,
+        event: 'workflow_dispatch',
+        status: 'completed',
+        conclusion: 'success',
+        created_at: '2024-01-01T10:00:00Z',
+        updated_at: '2024-01-01T10:03:00Z',
+        head_sha: 'abc123'
+      },
+      {
+        id: 3,
+        event: 'push',
+        status: 'completed',
+        conclusion: 'success',
+        created_at: '2024-01-01T10:01:00Z',
+        updated_at: '2024-01-01T10:05:00Z',
+        head_sha: 'abc123'
+      },
+      {
+        id: 4,
+        event: 'schedule',
+        status: 'completed',
+        conclusion: 'success',
+        created_at: '2024-01-01T10:00:00Z',
+        updated_at: '2024-01-01T10:04:00Z',
+        head_sha: 'abc123'
+      }
+    ]
+
+    const result = filterPushCheckSuites(checkSuites as any)
+
+    expect(result).toHaveLength(2)
+    expect(result[0].id).toBe(1)
+    expect(result[0].event).toBe('push')
+    expect(result[1].id).toBe(3)
+    expect(result[1].event).toBe('push')
+  })
+
+  test('returns empty array when no push events', () => {
+    const checkSuites = [
+      {
+        id: 1,
+        event: 'workflow_dispatch',
+        status: 'completed',
+        conclusion: 'success',
+        created_at: '2024-01-01T10:00:00Z',
+        updated_at: '2024-01-01T10:02:00Z',
+        head_sha: 'abc123'
+      },
+      {
+        id: 2,
+        event: 'schedule',
+        status: 'completed',
+        conclusion: 'success',
+        created_at: '2024-01-01T10:00:00Z',
+        updated_at: '2024-01-01T10:03:00Z',
+        head_sha: 'abc123'
+      }
+    ]
+
+    const result = filterPushCheckSuites(checkSuites as any)
+
+    expect(result).toHaveLength(0)
+  })
+
+  test('handles empty array', () => {
+    const result = filterPushCheckSuites([])
+    expect(result).toHaveLength(0)
+  })
+
+  test('handles check suites without event field', () => {
+    const checkSuites = [
+      {
+        id: 1,
+        // No event field
+        status: 'completed',
+        conclusion: 'success',
+        created_at: '2024-01-01T10:00:00Z',
+        updated_at: '2024-01-01T10:02:00Z',
+        head_sha: 'abc123'
+      }
+    ]
+
+    const result = filterPushCheckSuites(checkSuites as any)
+
+    // Without event field, should be filtered out
+    expect(result).toHaveLength(0)
+  })
 })
 
 describe('calculateCheckSuiteStats', () => {
