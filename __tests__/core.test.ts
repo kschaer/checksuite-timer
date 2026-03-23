@@ -163,10 +163,11 @@ describe('calculateCheckSuiteStats', () => {
         cancelled: 0,
         skipped: 0,
         other: 0,
-        longest_checksuite: {
+        longest_checkrun: {
           duration_ms: 300000, // 5 minutes
           name: 'Build',
-          status: 'completed'
+          status: 'completed',
+          conclusion: 'success'
         }
       }
     },
@@ -265,10 +266,11 @@ describe('calculateCheckSuiteStats', () => {
         cancelled: 1,
         skipped: 0,
         other: 1,
-        longest_checksuite: {
+        longest_checkrun: {
           duration_ms: 600000, // 10 minutes
           name: 'Lint',
-          status: 'completed'
+          status: 'completed',
+          conclusion: 'failure'
         }
       }
     },
@@ -346,10 +348,11 @@ describe('calculateCheckSuiteStats', () => {
         cancelled: 0,
         skipped: 0,
         other: 0,
-        longest_checksuite: {
+        longest_checkrun: {
           duration_ms: 1800000, // 30 minutes
           name: 'E2E Tests',
-          status: 'completed'
+          status: 'completed',
+          conclusion: 'timed_out'
         }
       }
     },
@@ -425,10 +428,11 @@ describe('calculateCheckSuiteStats', () => {
         cancelled: 0,
         skipped: 1,
         other: 2,
-        longest_checksuite: {
+        longest_checkrun: {
           duration_ms: 300000, // 5 minutes
           name: 'Skipped Job',
-          status: 'completed'
+          status: 'completed',
+          conclusion: 'skipped'
         }
       }
     },
@@ -451,10 +455,11 @@ describe('calculateCheckSuiteStats', () => {
         cancelled: 0,
         skipped: 0,
         other: 0,
-        longest_checksuite: {
+        longest_checkrun: {
           duration_ms: 180000, // 3 minutes
           name: 'Check Suite #999',
-          status: 'completed'
+          status: 'completed',
+          conclusion: 'success'
         }
       }
     }

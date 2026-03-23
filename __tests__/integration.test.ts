@@ -228,10 +228,11 @@ describe('Integration Tests', () => {
         cancelled: 0,
         skipped: 0,
         other: 0,
-        longest_checksuite: {
+        longest_checkrun: {
           duration_ms: 360000, // 6 minutes (10:02 to 10:08)
           name: 'Build',
-          status: 'completed'
+          status: 'completed',
+          conclusion: 'failure'
         }
       })
 
@@ -245,10 +246,11 @@ describe('Integration Tests', () => {
         cancelled: 0,
         skipped: 0,
         other: 0,
-        longest_checksuite: {
+        longest_checkrun: {
           duration_ms: 120000, // 2 minutes (11:01 to 11:03)
           name: 'Deploy',
-          status: 'completed'
+          status: 'completed',
+          conclusion: 'success'
         }
       })
 

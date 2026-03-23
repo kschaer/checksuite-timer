@@ -68,7 +68,8 @@ export async function run(): Promise<void> {
 
         const cortexResults = await cortexService.postDeploys(
           result.commits,
-          inputs.branch
+          inputs.branch,
+          since
         )
 
         logCortexResults(cortexResults)

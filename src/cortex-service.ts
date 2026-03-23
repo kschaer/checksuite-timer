@@ -32,8 +32,11 @@ export class CortexService {
     private config: CortexConfig
   ) {}
 
-  // Fetch all deploys with pagination and cache them
-  async fetchAllDeploys(entityId: string): Promise<CortexDeploy[]> {
+  // Fetch deploys with pagination, stopping when we go beyond the time window
+  async fetchAllDeploys(
+    entityId: string,
+    since: Date
+  ): Promise<CortexDeploy[]> {
     if (this.deploysCache !== null) {
       return this.deploysCache
     }
@@ -41,18 +44,39 @@ export class CortexService {
     const allDeploys: CortexDeploy[] = []
     let page = 0
     let hasMorePages = true
+    const sinceTime = since.getTime()
+
+    core.debug(
+      `Fetching deploys since ${since.toISOString()} for deduplication`
+    )
 
     while (hasMorePages) {
       try {
         const response = await this.cortexClient.getDeploys(entityId, page)
-        allDeploys.push(...response.deployments)
+
+        // Check each deploy's timestamp and stop if we've gone too far back
+        let hitOldDeploys = false
+        for (const deploy of response.deployments) {
+          const deployTime = new Date(deploy.timestamp).getTime()
+
+          if (deployTime >= sinceTime) {
+            allDeploys.push(deploy)
+          } else {
+            // We've hit deploys older than our time window, stop fetching
+            hitOldDeploys = true
+            core.debug(
+              `Stopped fetching at page ${page}: found deploy from ${deploy.timestamp} (before ${since.toISOString()})`
+            )
+            break
+          }
+        }
 
         core.debug(
-          `Fetched page ${page} of deploys: ${response.deployments.length} deploys (total so far: ${allDeploys.length})`
+          `Fetched page ${page}: ${response.deployments.length} deploys returned, ${allDeploys.length} within time window`
         )
 
-        // Check if there are more pages
-        if (page + 1 >= response.totalPages) {
+        // Stop if we hit old deploys or reached the last page
+        if (hitOldDeploys || page + 1 >= response.totalPages) {
           hasMorePages = false
         } else {
           page++
@@ -70,7 +94,7 @@ export class CortexService {
     }
 
     core.info(
-      `Fetched ${allDeploys.length} existing deploys from Cortex for deduplication`
+      `Fetched ${allDeploys.length} existing deploys from Cortex within time window for deduplication`
     )
     this.deploysCache = allDeploys
     return allDeploys
@@ -165,7 +189,8 @@ export class CortexService {
   // Post deploys for multiple commits (idempotent)
   async postDeploys(
     analyses: CommitAnalysis[],
-    branch: string
+    branch: string,
+    since: Date
   ): Promise<DeploysResult> {
     let successful = 0
     let failed = 0
@@ -173,8 +198,11 @@ export class CortexService {
     let created = 0
     let updated = 0
 
-    // Fetch all existing deploys once
-    const existingDeploys = await this.fetchAllDeploys(this.config.entityId)
+    // Fetch existing deploys within the time window
+    const existingDeploys = await this.fetchAllDeploys(
+      this.config.entityId,
+      since
+    )
 
     for (const analysis of analyses) {
       // Check if we should post this commit

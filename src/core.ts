@@ -53,10 +53,11 @@ export interface CheckSuiteStats {
   cancelled: number
   skipped: number
   other: number
-  longest_checksuite?: {
+  longest_checkrun?: {
     duration_ms: number
     name: string
     status: string
+    conclusion: string | null
   }
 }
 
@@ -119,6 +120,7 @@ export function calculateCheckSuiteStats(
   let longestDuration = 0
   let longestName = ''
   let longestStatus = ''
+  let longestConclusion: string | null = null
 
   for (const suite of checkSuites) {
     // Track conclusion counts
@@ -154,6 +156,7 @@ export function calculateCheckSuiteStats(
             longestDuration = duration
             longestName = run.name
             longestStatus = run.status
+            longestConclusion = run.conclusion
           }
         }
       }
@@ -171,16 +174,18 @@ export function calculateCheckSuiteStats(
           ? `${suite.head_branch} #${suite.id}`
           : `Check Suite #${suite.id}`
         longestStatus = suite.status
+        longestConclusion = suite.conclusion
       }
     }
   }
 
-  // Add longest checksuite info if we found one
+  // Add longest checkrun info if we found one
   if (longestDuration > 0) {
-    stats.longest_checksuite = {
+    stats.longest_checkrun = {
       duration_ms: longestDuration,
       name: longestName,
-      status: longestStatus
+      status: longestStatus,
+      conclusion: longestConclusion
     }
   }
 

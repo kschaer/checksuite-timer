@@ -31,14 +31,17 @@ describe('CortexService', () => {
   })
 
   describe('fetchAllDeploys', () => {
-    test('fetches all pages of deploys', async () => {
+    test('fetches all pages of deploys within time window', async () => {
+      const since = new Date('2024-01-01T00:00:00Z')
+
       mockClient.getDeploys
         .mockResolvedValueOnce({
           deployments: [
             {
               uuid: 'deploy-1',
               sha: 'abc123',
-              environment: 'production'
+              environment: 'production',
+              timestamp: '2024-01-02T10:00:00Z'
             } as CortexDeploy
           ],
           page: 0,
@@ -50,7 +53,8 @@ describe('CortexService', () => {
             {
               uuid: 'deploy-2',
               sha: 'def456',
-              environment: 'production'
+              environment: 'production',
+              timestamp: '2024-01-01T10:00:00Z'
             } as CortexDeploy
           ],
           page: 1,
@@ -58,7 +62,7 @@ describe('CortexService', () => {
           total: 2
         })
 
-      const result = await service.fetchAllDeploys('my-service')
+      const result = await service.fetchAllDeploys('my-service', since)
 
       expect(result).toHaveLength(2)
       expect(result[0].uuid).toBe('deploy-1')
@@ -68,13 +72,64 @@ describe('CortexService', () => {
       expect(mockClient.getDeploys).toHaveBeenCalledWith('my-service', 1)
     })
 
+    test('stops fetching when deploys are older than time window', async () => {
+      const since = new Date('2024-01-01T00:00:00Z')
+
+      mockClient.getDeploys
+        .mockResolvedValueOnce({
+          deployments: [
+            {
+              uuid: 'deploy-1',
+              sha: 'abc123',
+              environment: 'production',
+              timestamp: '2024-01-02T10:00:00Z'
+            } as CortexDeploy,
+            {
+              uuid: 'deploy-2',
+              sha: 'def456',
+              environment: 'production',
+              timestamp: '2024-01-01T10:00:00Z'
+            } as CortexDeploy
+          ],
+          page: 0,
+          totalPages: 3,
+          total: 5
+        })
+        .mockResolvedValueOnce({
+          deployments: [
+            {
+              uuid: 'deploy-3',
+              sha: 'ghi789',
+              environment: 'production',
+              timestamp: '2023-12-31T10:00:00Z' // Before time window
+            } as CortexDeploy
+          ],
+          page: 1,
+          totalPages: 3,
+          total: 5
+        })
+
+      const result = await service.fetchAllDeploys('my-service', since)
+
+      // Should only include first 2 deploys, stopped at page 1
+      expect(result).toHaveLength(2)
+      expect(result[0].uuid).toBe('deploy-1')
+      expect(result[1].uuid).toBe('deploy-2')
+      expect(mockClient.getDeploys).toHaveBeenCalledTimes(2)
+      // Should NOT have called page 2
+      expect(mockClient.getDeploys).not.toHaveBeenCalledWith('my-service', 2)
+    })
+
     test('caches deploys for subsequent calls', async () => {
+      const since = new Date('2024-01-01T00:00:00Z')
+
       mockClient.getDeploys.mockResolvedValue({
         deployments: [
           {
             uuid: 'deploy-1',
             sha: 'abc123',
-            environment: 'production'
+            environment: 'production',
+            timestamp: '2024-01-02T00:00:00Z'
           } as CortexDeploy
         ],
         page: 0,
@@ -82,20 +137,23 @@ describe('CortexService', () => {
         total: 1
       })
 
-      const result1 = await service.fetchAllDeploys('my-service')
-      const result2 = await service.fetchAllDeploys('my-service')
+      const result1 = await service.fetchAllDeploys('my-service', since)
+      const result2 = await service.fetchAllDeploys('my-service', since)
 
       expect(result1).toBe(result2) // Same reference
       expect(mockClient.getDeploys).toHaveBeenCalledTimes(1) // Only called once
     })
 
     test('handles single page response', async () => {
+      const since = new Date('2024-01-01T00:00:00Z')
+
       mockClient.getDeploys.mockResolvedValue({
         deployments: [
           {
             uuid: 'deploy-1',
             sha: 'abc123',
-            environment: 'production'
+            environment: 'production',
+            timestamp: '2024-01-02T00:00:00Z'
           } as CortexDeploy
         ],
         page: 0,
@@ -103,13 +161,15 @@ describe('CortexService', () => {
         total: 1
       })
 
-      const result = await service.fetchAllDeploys('my-service')
+      const result = await service.fetchAllDeploys('my-service', since)
 
       expect(result).toHaveLength(1)
       expect(mockClient.getDeploys).toHaveBeenCalledTimes(1)
     })
 
     test('handles empty deploys', async () => {
+      const since = new Date('2024-01-01T00:00:00Z')
+
       mockClient.getDeploys.mockResolvedValue({
         deployments: [],
         page: 0,
@@ -117,15 +177,17 @@ describe('CortexService', () => {
         total: 0
       })
 
-      const result = await service.fetchAllDeploys('my-service')
+      const result = await service.fetchAllDeploys('my-service', since)
 
       expect(result).toHaveLength(0)
     })
 
     test('handles fetch errors gracefully', async () => {
+      const since = new Date('2024-01-01T00:00:00Z')
+
       mockClient.getDeploys.mockRejectedValue(new Error('API Error'))
 
-      const result = await service.fetchAllDeploys('my-service')
+      const result = await service.fetchAllDeploys('my-service', since)
 
       expect(result).toEqual([])
       expect(core.warning).toHaveBeenCalledWith(
@@ -369,7 +431,11 @@ describe('CortexService', () => {
       })
       mockClient.createDeploy.mockResolvedValue({ uuid: 'deploy-123', id: 1 })
 
-      const results = await service.postDeploys(analyses, 'main')
+      const results = await service.postDeploys(
+        analyses,
+        'main',
+        new Date('2024-03-04T00:00:00Z')
+      )
 
       expect(results.total).toBe(3)
       expect(results.successful).toBe(3)
@@ -392,7 +458,11 @@ describe('CortexService', () => {
       })
       mockClient.createDeploy.mockResolvedValue({ uuid: 'deploy-123', id: 1 })
 
-      const results = await service.postDeploys(analyses, 'main')
+      const results = await service.postDeploys(
+        analyses,
+        'main',
+        new Date('2024-03-04T00:00:00Z')
+      )
 
       expect(results.total).toBe(3)
       expect(results.successful).toBe(1)
@@ -407,7 +477,8 @@ describe('CortexService', () => {
           {
             uuid: 'existing-1',
             sha: 'abc123',
-            environment: 'production'
+            environment: 'production',
+            timestamp: '2024-03-04T11:00:00Z' // Within time window
           } as CortexDeploy
         ],
         page: 0,
@@ -420,7 +491,11 @@ describe('CortexService', () => {
         id: 3
       })
 
-      const results = await service.postDeploys(analyses, 'main')
+      const results = await service.postDeploys(
+        analyses,
+        'main',
+        new Date('2024-03-04T00:00:00Z')
+      )
 
       expect(results.total).toBe(3)
       expect(results.successful).toBe(3)
@@ -442,7 +517,11 @@ describe('CortexService', () => {
         .mockRejectedValueOnce(new Error('API Error'))
         .mockResolvedValueOnce({ uuid: 'deploy-3', id: 5 })
 
-      const results = await service.postDeploys(analyses, 'main')
+      const results = await service.postDeploys(
+        analyses,
+        'main',
+        new Date('2024-03-04T00:00:00Z')
+      )
 
       expect(results.total).toBe(3)
       expect(results.successful).toBe(2)
@@ -458,7 +537,11 @@ describe('CortexService', () => {
         total: 0
       })
 
-      const results = await service.postDeploys([], 'main')
+      const results = await service.postDeploys(
+        [],
+        'main',
+        new Date('2024-03-04T00:00:00Z')
+      )
 
       expect(results.total).toBe(0)
       expect(results.successful).toBe(0)

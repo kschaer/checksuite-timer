@@ -73,10 +73,11 @@ describe('AnalysisService', () => {
         cancelled: 0,
         skipped: 0,
         other: 0,
-        longest_checksuite: {
+        longest_checkrun: {
           duration_ms: 240000,
           name: 'CI Tests',
-          status: 'completed'
+          status: 'completed',
+          conclusion: 'success'
         }
       })
       expect(result.error).toBeUndefined()
@@ -163,10 +164,11 @@ describe('AnalysisService', () => {
         cancelled: 0,
         skipped: 0,
         other: 0,
-        longest_checksuite: {
+        longest_checkrun: {
           duration_ms: 420000, // 7 minutes (10:01 to 10:08)
           name: 'Build',
-          status: 'completed'
+          status: 'completed',
+          conclusion: 'failure'
         }
       })
       expect(result.error).toBeUndefined()
