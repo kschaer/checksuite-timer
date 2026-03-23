@@ -7,6 +7,17 @@ export interface CheckRun {
     completed_at: string | null;
     head_sha: string;
 }
+export interface WorkflowRun {
+    id: number;
+    name: string;
+    event: string;
+    check_suite_id: number;
+    status: string;
+    conclusion: string | null;
+    created_at: string;
+    updated_at: string;
+    head_sha: string;
+}
 export interface CheckSuite {
     id: number;
     status: string;
@@ -70,6 +81,7 @@ export interface AnalysisResult {
     };
 }
 export declare function parseTimeWindow(timeWindow: string): Date;
+export declare function filterPushCheckSuites(checkSuites: CheckSuite[], workflowRuns: WorkflowRun[]): CheckSuite[];
 export declare function calculateCheckSuiteStats(checkSuites: CheckSuite[]): CheckSuiteStats;
 export declare function calculateWallToWallDuration(checkSuites: CheckSuite[]): number;
 export declare function formatCommitData(commit: Commit, owner: string, repo: string): CommitData;

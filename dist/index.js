@@ -30048,12 +30048,46 @@ function logCortexResults(results) {
 /***/ }),
 
 /***/ 9411:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AnalysisService = void 0;
+const core = __importStar(__nccwpck_require__(7484));
 const core_1 = __nccwpck_require__(828);
 // Service class for commit analysis - testable with mocked GitHubClient
 class AnalysisService {
@@ -30064,10 +30098,22 @@ class AnalysisService {
     // Analyze a single commit - separated API calls from business logic
     async analyzeCommit(commit, owner, repo) {
         try {
-            // Fetch check suites
+            // Fetch all check suites for this commit
             const checkSuites = await this.gitHubClient.getCheckSuites(owner, repo, commit.sha);
+            // Fetch workflow runs to get event triggers (push, workflow_dispatch, etc.)
+            const workflowRuns = await this.gitHubClient.getWorkflowRuns(owner, repo, commit.sha);
+            // Debug logging
+            core.debug(`Commit ${commit.sha.substring(0, 7)}: Found ${checkSuites.length} check suites, ${workflowRuns.length} workflow runs`);
+            if (workflowRuns.length > 0) {
+                const events = workflowRuns.map(r => r.event).join(', ');
+                core.debug(`  Workflow run events: ${events}`);
+            }
+            // Filter to only push-triggered check suites
+            // This matches what GitHub shows on the commit page
+            const pushCheckSuites = (0, core_1.filterPushCheckSuites)(checkSuites, workflowRuns);
+            core.debug(`  After filtering: ${pushCheckSuites.length} check suites remaining`);
             // Fetch check runs for each check suite to get workflow names
-            for (const suite of checkSuites) {
+            for (const suite of pushCheckSuites) {
                 try {
                     const checkRuns = await this.gitHubClient.getCheckRuns(owner, repo, suite.id);
                     suite.check_runs = checkRuns;
@@ -30079,7 +30125,7 @@ class AnalysisService {
                 }
             }
             // Pure business logic (easily testable)
-            return (0, core_1.createCommitAnalysis)(commit, checkSuites, owner, repo);
+            return (0, core_1.createCommitAnalysis)(commit, pushCheckSuites, owner, repo);
         }
         catch (error) {
             // Enhanced error handling with better context
@@ -30128,6 +30174,7 @@ exports.AnalysisService = AnalysisService;
 // Pure functions with no side effects - easily testable
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.parseTimeWindow = parseTimeWindow;
+exports.filterPushCheckSuites = filterPushCheckSuites;
 exports.calculateCheckSuiteStats = calculateCheckSuiteStats;
 exports.calculateWallToWallDuration = calculateWallToWallDuration;
 exports.formatCommitData = formatCommitData;
@@ -30155,6 +30202,23 @@ function parseTimeWindow(timeWindow) {
         return new Date(now.getTime() - value * 60 * 1000);
     }
     throw new Error(`Unsupported time unit: ${unit}`);
+}
+// Pure function: Filter check suites to only include push events
+// Uses workflow run data to determine which check suites were triggered by push
+// This matches what GitHub shows on the commit page
+function filterPushCheckSuites(checkSuites, workflowRuns) {
+    // Build map of check_suite_id -> event
+    const suiteEventMap = new Map();
+    for (const run of workflowRuns) {
+        suiteEventMap.set(run.check_suite_id, run.event);
+    }
+    // Filter check suites to only include push events
+    return checkSuites.filter(suite => {
+        const event = suiteEventMap.get(suite.id);
+        // Include if event is 'push', or if we don't have workflow run data (defensive)
+        // Missing workflow run data might mean non-Actions check suites
+        return !event || event === 'push';
+    });
 }
 // Pure function: Checksuite statistics calculation
 function calculateCheckSuiteStats(checkSuites) {
@@ -30327,7 +30391,11 @@ function createCortexDeployPayload(analysis, config, branch) {
 }
 // Pure function: Determine if a commit should be posted to Cortex
 function shouldPostToCortex(analysis, config) {
-    // If postPerCommit is true, post all commits
+    // Skip commits with no checksuites AND no error (no data to report)
+    if (analysis.stats.total === 0 && !analysis.error) {
+        return false;
+    }
+    // If postPerCommit is true, post all commits with checksuites
     if (config.postPerCommit) {
         return true;
     }
@@ -30762,6 +30830,15 @@ class GitHubApiClient {
             check_suite_id: checkSuiteId
         });
         return response.data.check_runs;
+    }
+    async getWorkflowRuns(owner, repo, sha) {
+        const response = await this.octokit.rest.actions.listWorkflowRunsForRepo({
+            owner,
+            repo,
+            head_sha: sha,
+            per_page: 100
+        });
+        return response.data.workflow_runs;
     }
 }
 exports.GitHubApiClient = GitHubApiClient;
