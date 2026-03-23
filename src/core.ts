@@ -200,7 +200,7 @@ export function calculateWallToWallDuration(checkSuites: CheckSuite[]): number {
   }
 
   // Collect all check runs with valid timestamps
-  const validCheckRuns: Array<{ started_at: number; completed_at: number }> = []
+  const validCheckRuns: { started_at: number; completed_at: number }[] = []
 
   for (const suite of checkSuites) {
     if (suite.check_runs && suite.check_runs.length > 0) {
@@ -217,9 +217,7 @@ export function calculateWallToWallDuration(checkSuites: CheckSuite[]): number {
 
   // If we have check runs with valid timestamps, use those for accurate timing
   if (validCheckRuns.length > 0) {
-    const earliestStart = Math.min(
-      ...validCheckRuns.map(run => run.started_at)
-    )
+    const earliestStart = Math.min(...validCheckRuns.map(run => run.started_at))
     const latestEnd = Math.max(...validCheckRuns.map(run => run.completed_at))
     return latestEnd - earliestStart
   }
